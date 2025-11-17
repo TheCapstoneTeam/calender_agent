@@ -1,38 +1,86 @@
 # Project Setup Guide
 
-This project uses Python and requires installing several dependencies before running.
+This project uses **Python 3** and a **virtual environment (venv)**.  
+Follow these steps to set up the project on any machine.
 
-## 📦 Installation
+---
 
-First, install all required packages:
+## 🚀 1. Clone the Repository
+```bash
+git clone <your-repo-url>
+cd <your-repo-folder>
+````
+
+---
+
+## 🧰 2. Create a Virtual Environment (EVERY teammate must do this)
+
+The `venv/` folder is **NOT** committed to GitHub, so each teammate must create their own.
+
+### Windows:
+
+```bash
+python -m venv venv
+venv\Scripts\activate
+```
+
+### Linux / macOS:
+
+```bash
+python3 -m venv venv
+source venv/bin/activate
+```
+
+---
+
+## 📦 3. Install Project Requirements
+
+Run:
 
 ```bash
 pip install -r requirements.txt
-````
-
-## ⚠️ Important Note (google-api-core)
-
-The package `google-generativeai` automatically installs `google-api-core==2.25.1`,
-but the project requires **google-api-core >= 2.28.1**.
-
-So uninstall the old one:
-
-```bash
-pip uninstall google-api-core
 ```
 
-Then install the correct version:
+---
+
+## ⚠️ 4. Fix for google-generativeai Dependency
+
+The package `google-generativeai` auto-installs an outdated version of `google-api-core`.
+
+Uninstall it:
+
+```bash
+pip uninstall google-api-core -y
+```
+
+Install working version:
 
 ```bash
 pip install google-api-core==2.28.1
 ```
 
-## ✔️ You’re Ready to Go
+---
 
-After completing the steps above, the environment should be correctly set up
-and the project will run without dependency issues.
+## ✔️ Setup Complete!
+
+You’re now ready to run:
+
+```bash
+python test.py
+```
+
+or any other project script.
 
 ---
 
-If any installation conflicts appear (backtracking issues, version loops, etc.),
-repeat the uninstall/install step for `google-api-core`.
+## 📝 Notes
+
+* Never commit your `venv/` folder.
+* Always activate your venv before running scripts.
+* If you install new packages, update `requirements.txt` using:
+
+```bash
+pip freeze > requirements.txt
+```
+
+---
