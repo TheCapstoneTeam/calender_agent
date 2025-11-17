@@ -1,6 +1,7 @@
 google-adk
 google-auth
 google-auth-oauthlib
+google-generativeai
 google-api-python-client
 python-dateutil
 pytz
