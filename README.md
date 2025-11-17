@@ -1,4 +1,3 @@
-````markdown
 # Project Setup Guide
 
 This project uses Python and requires installing several dependencies before running.
