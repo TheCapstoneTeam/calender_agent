@@ -7,8 +7,7 @@ Follow these steps to set up the project on any machine.
 
 ## 🚀 1. Clone the Repository
 ```bash
-git clone <your-repo-url>
-cd <your-repo-folder>
+git clone <https://github.com/Pro1943/KraggleCapstone.git>
 ````
 
 ---
