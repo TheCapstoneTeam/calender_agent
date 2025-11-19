@@ -12,7 +12,7 @@ git clone <https://github.com/Pro1943/KraggleCapstone.git>
 
 ---
 
-## 🧰 2. Create a Virtual Environment (optional if you decide to install the libraries )
+## 🧰 2. Create a Virtual Environment (optional if you decide to install the libraries globally)
 
 The `venv/` folder is **NOT** committed to GitHub, so each teammate must create their own.
 Also each member must make their own `.env` file containting the following structure:
