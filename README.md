@@ -12,10 +12,15 @@ git clone <https://github.com/Pro1943/KraggleCapstone.git>
 
 ---
 
-## 🧰 2. Create a Virtual Environment (EVERY teammate must do this)
+## 🧰 2. Create a Virtual Environment (optional if you decide to install the libraries )
 
 The `venv/` folder is **NOT** committed to GitHub, so each teammate must create their own.
+Also each member must make their own `.env` file containting the following structure:
 
+```bash
+GENAI_API_KEY={your_api_key}
+GOOGLE_CLIENT_SECRET=client_secrets.json
+```
 ### Windows:
 
 ```bash
