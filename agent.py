@@ -1,16 +1,19 @@
 # agent.py
 
 from google.adk.agents import LlmAgent
-from capstoneproject.calendar_tools import create_event
 from capstoneproject.auth import get_api_key
-
-
-# Ensure API key is loaded into the environment for ADK / genai libs to use
+from capstoneproject.calendar_tools import create_event, check_conflict
+# Load API key so ADK can use Gemini
 get_api_key()
 
-# ADK requires a module-level variable named `root_agent` for the CLI to discover
+# Root agent required by ADK
 root_agent = LlmAgent(
-    name="calendar_agent",   # valid identifier: no hyphens
-    model="gemini-2.5-flash",  # model specified as string
-    tools=[create_event],
+    name="calendar_agent",
+    model="gemini-2.5-flash",   # your LLM
+    description="An agent that can schedule Google Calendar events using OAuth.",
+    instruction=(
+        "When the user asks to schedule or create an event, "
+        "use the create_event tool with correct parameters."
+    ),
+    tools=[create_event,check_conflict],  # <-- This is your TOOL for Calendar
 )
