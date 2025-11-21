@@ -1,6 +1,6 @@
 from google.adk.agents import LlmAgent
-from capstoneproject.auth import get_api_key
-from capstoneproject.calendar_tools import create_event, check_conflict
+from calendar_agent.auth import get_api_key
+from calendar_agent.calendar_tools import create_event, check_conflict
 
 get_api_key()
 
