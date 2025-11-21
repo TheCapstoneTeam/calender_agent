@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 import pytz
-from capstoneproject.auth import get_calendar_service
+from calendar_agent.auth import get_calendar_service
 
 IST = pytz.timezone("Asia/Kolkata")
 
