@@ -1,8 +1,9 @@
-from datetime import datetime, timedelta
 import pytz
-from calendar_agent.auth import get_calendar_service
+from datetime import datetime, timedelta
+from .auth import get_calendar_service
 
 IST = pytz.timezone("Asia/Kolkata")
+now = datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
 
 # --------------------------
 #  Date & Time Helpers
