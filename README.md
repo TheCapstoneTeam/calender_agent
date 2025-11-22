@@ -24,6 +24,7 @@ git clone <git@github.com:TheCapstoneTeam/calender_agent.git>
 
 The `venv/` folder is **NOT** committed to GitHub, so each teammate must create their own.
 
+Change directory to `calendar_agent` and activate the `venv`.
 
 ### Windows:
 
@@ -45,7 +46,7 @@ source venv/bin/activate
 
 1. Make sure you have activated the virtual environment
 
-1. Copy the `requirements.txt` from the `calendar_agent` folder that the `git clone` step created to the parent folder, and run:
+1. Run:
 
    ```bash
    pip install -r requirements.txt
@@ -57,35 +58,30 @@ At this point, your directory should look like this.
 
 ```
 .
-├── .venv/
+
 ├── calendar_agent
 │   ├── README.md
 │   ├── __init__.py
-│   ├── __pycache__
-│   │   ├── __init__.cpython-314.pyc
-│   │   ├── agent.cpython-314.pyc
-│   │   ├── auth.cpython-314.pyc
-│   │   └── calendar_tools.cpython-314.pyc
+│   ├── __pycache__/
+│   ├── .venv/
+│   ├── .env
 │   ├── agent.py
 │   ├── auth.py
 │   ├── calendar_tools.py
 │   ├── credentials.json
 │   ├── requirements.txt
 │   └── token.json
-├── .env
-├── credentials.json
-├── requirements.txt
 ```
 
 ---
 
 ## ✔️ Setup Complete!
 
-You’re now ready to run the command below, ensure you're not in the `calendar_agent` directory, but its parent:
+You’re now ready to run the command below:
 
-```bash
-adk run calendar_agent
-```
+   ```bash
+   adk run calendar_agent
+   ```
 
 ---
 
@@ -93,7 +89,7 @@ adk run calendar_agent
 
 * Never commit your `venv/` folder.
 * Always activate your venv before running scripts.
-* `token.json` file will be created when you're running the `adk run` command and have successfully authorized the agent to access your Google Calendar
+* `token.json` file will be created when you're running the `adk run` command for the first time, and have successfully authorized the agent to access your Google Calendar
 * If you install new packages, update `requirements.txt` using:
 
 ```bash
