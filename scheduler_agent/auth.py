@@ -18,8 +18,8 @@ load_dotenv()
 SCOPES = ["https://www.googleapis.com/auth/calendar"]
 
 PROJECT_DIR = pathlib.Path(__file__).parent
-TOKEN_PATH = PROJECT_DIR / "token.json"
-CREDENTIALS_FILE = PROJECT_DIR / "credentials.json"   # <-- YOU MUST PROVIDE THIS
+TOKEN_PATH = PROJECT_DIR / "../token.json"
+CREDENTIALS_FILE = PROJECT_DIR / "../credentials.json"   # <-- YOU MUST PROVIDE THIS
 
 
 # ---------------------------------------------------
