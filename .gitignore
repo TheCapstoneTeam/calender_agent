@@ -1,6 +1,10 @@
-*credentials.json
-token.json
-client_secrets.json
+# environment
 __pycache__/
 *.pyc
 .env
+.python-version
+
+# secrets
+credentials.json
+token.json
+client_secrets.json
