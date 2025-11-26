@@ -101,7 +101,7 @@ def create_event(title: str, date: str, start_time: str, end_time: str, attendee
 
 def check_conflict(date: str, start_time: str, end_time: str):
     """
-    Checks overlapping events using UTC timezone.
+    Checks overlapping events across ALL user calendars using UTC timezone.
     
     Args:
         date: Date string (DD-MM-YYYY or YYYY-MM-DD)
@@ -131,19 +131,37 @@ def check_conflict(date: str, start_time: str, end_time: str):
     start_iso = to_iso(date_obj, start_t, local_tz)
     end_iso = to_iso(date_obj, end_t, local_tz)
 
-    events_result = service.events().list(
-        calendarId="primary",
-        timeMin=start_iso,
-        timeMax=end_iso,
-        singleEvents=True,
-        orderBy="startTime"
-    ).execute()
+    # 1. Get all calendars
+    calendar_list_result = service.calendarList().list(minAccessRole='reader').execute()
+    calendars = calendar_list_result.get('items', [])
 
-    events = events_result.get("items", [])
+    all_conflicts = []
+
+    # 2. Check each calendar
+    for cal in calendars:
+        cal_id = cal.get('id')
+        # Skip if selected is False (hidden calendars)
+        if not cal.get('selected', True):
+            continue
+
+        events_result = service.events().list(
+            calendarId=cal_id,
+            timeMin=start_iso,
+            timeMax=end_iso,
+            singleEvents=True,
+            orderBy="startTime"
+        ).execute()
+
+        events = events_result.get("items", [])
+        if events:
+            # Add calendar name to event details for clarity
+            for event in events:
+                event['calendarSummary'] = cal.get('summary', 'Unknown Calendar')
+            all_conflicts.extend(events)
 
     return {
-        "conflict": len(events) > 0,
-        "events": events,
+        "conflict": len(all_conflicts) > 0,
+        "events": all_conflicts,
         "start": start_iso,
         "end": end_iso
     }
