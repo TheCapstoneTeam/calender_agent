@@ -85,6 +85,18 @@ def get_calendar_service():
     service = build("calendar", "v3", credentials=creds)
     return service
 
+def get_current_datetime_context():
+    """Get current date/time information for the agent."""
+    now = datetime.now()
+    return f"""
+Current date and time: {now.strftime('%Y-%m-%d %H:%M')} ({now.strftime('%A, %B %d, %Y')})
+
+When users say:
+- "tomorrow" → use date: {(now.replace(hour=0, minute=0, second=0, microsecond=0) + __import__('datetime').timedelta(days=1)).strftime('%Y-%m-%d')}
+- "today" → use date: {now.strftime('%Y-%m-%d')}
+- "next week" → add 7 days from today
+- "in 2 hours" → calculate from current time: {now.strftime('%H:%M')}
+    """.strip()
 
 # ---------------------------------------------------
 # Manual test (optional)
