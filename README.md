@@ -95,7 +95,7 @@ You’re now ready to run the command below:
 
    ```bash
    uv run python test_timezone.py 
-   adk run calendar_agent
+   adk run scheduler_agent
    ```
 
 
