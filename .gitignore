@@ -11,4 +11,4 @@ client_secrets.json
 
 # scratch/experimental files
 scratch/
-adk_session.typescript
+adk_session.typescript*
