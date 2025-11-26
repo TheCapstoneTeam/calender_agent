@@ -4,4 +4,3 @@ google-auth
 google-auth-oauthlib
 protobuf
 python-dotenv
-pytz
