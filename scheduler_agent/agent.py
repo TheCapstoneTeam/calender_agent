@@ -1,7 +1,6 @@
 from google.adk.agents import LlmAgent
 from .config import get_api_key, get_current_datetime_context
 from .calendar_tools import create_event, check_conflict
-from datetime import datetime
 
 get_api_key()
 get_current_datetime_context()
