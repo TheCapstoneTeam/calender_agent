@@ -13,7 +13,7 @@ git clone <git@github.com:TheCapstoneTeam/calender_agent.git>
 
 ---
 
-## 1. Get your Google API key
+## 🔐 1. Get your Google API key
 
 If you have not done so, sign up and create an [API key in Google AI Studio](https://aistudio.google.com/app/api-keys). Create new file named `.env` . Then copy the line below and paste the line and your `api key` in the spot indicated.
 
@@ -65,7 +65,7 @@ source .venv/bin/activate
    uv pip install -r requirements.txt
    ```
 ---
-## 4. Folder Structure
+## 📁 4. Folder Structure
 
 At this point, your directory should look like this.
 
