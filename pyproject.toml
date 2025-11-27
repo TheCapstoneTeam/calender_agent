@@ -1,7 +1,31 @@
 [project]
 name = "calender-agent"
 version = "0.1.0"
-description = "Add your description here"
+description = "AI-powered calendar agent with Google Calendar integration"
 readme = "README.md"
-requires-python = ">=3.14"
-dependencies = []
+requires-python = ">=3.9"
+dependencies = [
+    "google-genai",
+    "google-adk",
+    "google-auth",
+    "google-auth-oauthlib",
+    "google-api-python-client",
+    "protobuf",
+    "python-dotenv",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "pytest-mock>=3.11.1",
+]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "pytest-mock>=3.11.1",
+]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_backend"
