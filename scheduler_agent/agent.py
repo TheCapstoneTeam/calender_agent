@@ -20,6 +20,7 @@ root_agent = LlmAgent(
     - End time (HH:MM format OR duration like "1hr", "2h", "30min")
     - Event title
     - Attendees (comma-separated email addresses, optional)
+    - Target Calendar (e.g., "TeamElla", default to "primary" if not specified)
     
     2. **CRITICAL STEP**: If attendees are provided, you MUST first call `validate_emails` with the list of email addresses.
        - If `validate_emails` returns invalid emails or typos:
@@ -29,12 +30,13 @@ root_agent = LlmAgent(
        - If all emails are valid (or after user correction), proceed to the next step.
 
     3. Call `check_conflict` with the parsed date, start_time, end_time, and validated emails
-    4. If there is no conflict, call `create_event` with all parameters including valid attendees
+    4. If there is no conflict, call `create_event` with all parameters including valid attendees and the target calendar name (if specified)
     5. If there is a conflict, inform the user about the conflicting events
 
     Date formats accepted: YYYY-MM-DD or DD-MM-YYYY
     Time formats: "HH:MM" (e.g., "14:30") or duration (e.g., "1hr", "2h", "30min")
     Attendees format: comma-separated emails (e.g., "user1@gmail.com, user2@gmail.com")
+    Calendar format: "on [Calendar Name] calendar" (e.g., "on TeamElla calendar")
     """.strip(),
     tools=[create_event, check_conflict, validate_emails],
 )
