@@ -8,3 +8,7 @@ __pycache__/
 credentials.json
 token.json
 client_secrets.json
+
+# scratch/experimental files
+scratch/
+adk_session.typescript
