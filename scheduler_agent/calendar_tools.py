@@ -9,7 +9,28 @@ from .email_utils import validate_emails
 #  Event Tools
 # --------------------------
 
-def create_event(title: str, date: str, start_time: str, end_time: str, attendees: str = ""):
+def get_calendar_id(service, calendar_name: str) -> str:
+    """
+    Resolves a calendar name to its ID.
+    Returns 'primary' if name is empty or not found.
+    """
+    if not calendar_name or calendar_name.lower() == 'primary':
+        return 'primary'
+
+    # List all calendars
+    calendar_list = service.calendarList().list(minAccessRole='writer').execute()
+    items = calendar_list.get('items', [])
+
+    for cal in items:
+        if cal.get('summary', '').lower() == calendar_name.lower():
+            return cal.get('id')
+    
+    # Fallback to primary if not found (or maybe raise error? For now fallback is safer)
+    print(f"Warning: Calendar '{calendar_name}' not found. Using 'primary'.")
+    return 'primary'
+
+
+def create_event(title: str, date: str, start_time: str, end_time: str, attendees: str = "", calendar_name: str = "primary"):
     """
     Creates event with timezone-aware times in UTC.
 
@@ -19,12 +40,14 @@ def create_event(title: str, date: str, start_time: str, end_time: str, attendee
         start_time: Start time "11:15"
         end_time: End time "13:15" OR duration like "2hr"
         attendees: Comma-separated email addresses (optional)
+        calendar_name: Name of the calendar to create event on (default: "primary")
     
     Returns:
         Dictionary with event details including UTC timestamps
     """
 
     service = get_calendar_service()
+    target_calendar_id = get_calendar_id(service, calendar_name)
     
     # Get local timezone for interpreting naive times
     local_tz = get_local_timezone()
@@ -85,7 +108,7 @@ def create_event(title: str, date: str, start_time: str, end_time: str, attendee
             event_body["attendees"] = [{"email": email} for email in attendee_list]
 
     event = service.events().insert(
-        calendarId="primary", 
+        calendarId=target_calendar_id, 
         body=event_body,
         sendUpdates="all"  # Send email notifications to all attendees
     ).execute()
@@ -93,6 +116,7 @@ def create_event(title: str, date: str, start_time: str, end_time: str, attendee
     return {
         "status": "success",
         "event_id": event.get("id"),
+        "calendar_id": target_calendar_id,
         "start": start_iso,
         "end": end_iso,
         "attendees": attendees if attendees else "none"
@@ -277,7 +301,7 @@ def all_attendees_free(availability_result: dict) -> bool:
     return availability_result.get("all_free", False)
 
 
-def create_event_with_attendees(title: str, date: str, start_time: str, end_time: str, attendees: str, organizer_tz: str = None, check_availability: bool = True):
+def create_event_with_attendees(title: str, date: str, start_time: str, end_time: str, attendees: str, organizer_tz: str = None, check_availability: bool = True, calendar_name: str = "primary"):
     """
     Create an event with attendees, optionally checking availability first.
     
@@ -294,6 +318,7 @@ def create_event_with_attendees(title: str, date: str, start_time: str, end_time
         attendees: Comma-separated email addresses
         organizer_tz: Timezone name (e.g., 'Asia/Singapore'). If None, uses system timezone
         check_availability: If True, checks attendee availability before creating event
+        calendar_name: Name of the calendar to create event on (default: "primary")
     
     Returns:
         Dictionary with creation status:
@@ -337,12 +362,13 @@ def create_event_with_attendees(title: str, date: str, start_time: str, end_time
             }
     
     # Step 3: All clear - create the event
-    event_result = create_event(title, date, start_time, end_time, attendees)
+    event_result = create_event(title, date, start_time, end_time, attendees, calendar_name=calendar_name)
     
     # Get event link from the API
     service = get_calendar_service()
     event_id = event_result["event_id"]
-    event = service.events().get(calendarId="primary", eventId=event_id).execute()
+    target_cal_id = event_result.get("calendar_id", "primary")
+    event = service.events().get(calendarId=target_cal_id, eventId=event_id).execute()
     
     return {
         "status": "success",
