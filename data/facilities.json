@@ -1,0 +1,40 @@
+[
+    {
+        "name": "Meeting Room A",
+        "level": 1,
+        "capacity": 10,
+        "amenities": [
+            "Projector",
+            "Whiteboard",
+            "Video Conference"
+        ]
+    },
+    {
+        "name": "Meeting Room B",
+        "level": 1,
+        "capacity": 4,
+        "amenities": [
+            "Whiteboard"
+        ]
+    },
+    {
+        "name": "Conference Hall",
+        "level": 2,
+        "capacity": 50,
+        "amenities": [
+            "Projector",
+            "Mic",
+            "Stage",
+            "Power for 50 laptops"
+        ]
+    },
+    {
+        "name": "Focus Room 1",
+        "level": 2,
+        "capacity": 1,
+        "amenities": [
+            "Desk",
+            "Monitor"
+        ]
+    }
+]
