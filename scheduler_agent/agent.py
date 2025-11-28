@@ -6,6 +6,19 @@ from .calendar_tools import (
     get_team_members, find_facility, get_facility_info
 )
 from datetime import datetime
+import os
+
+# Observability: Phoenix Tracing
+# try:
+#     import phoenix as px
+#     from phoenix.trace.langchain import LangChainInstrumentor
+    
+#     # Only launch if explicitly enabled to avoid port conflicts in tests
+#     if os.environ.get("PHOENIX_ENABLED"):
+#         px.launch_app()
+#         LangChainInstrumentor().instrument()
+# except ImportError:
+#     pass
 
 get_api_key()
 
