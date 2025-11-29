@@ -3,7 +3,7 @@ __pycache__/
 *.pyc
 .env
 .python-version
-.vscode/settings.json
+
 
 # secrets
 credentials.json
