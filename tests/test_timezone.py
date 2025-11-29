@@ -4,7 +4,7 @@ This demonstrates how the system now handles timezones.
 """
 import sys
 from datetime import datetime, timezone
-from scheduler_agent.calendar_tools import (
+from scheduler_agent.datetime_utils import (
     get_local_timezone,
     parse_date,
     parse_time,
