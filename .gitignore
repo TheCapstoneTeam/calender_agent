@@ -14,3 +14,4 @@ client_secrets.json
 scratch/
 adk_session.typescript*
 
+.vscode/settings.json
