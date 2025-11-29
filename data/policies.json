@@ -1,0 +1,68 @@
+{
+    "policies": [
+        {
+            "id": "max_meeting_duration",
+            "name": "Maximum Meeting Duration",
+            "severity": "warning",
+            "enabled": true,
+            "max_hours": 4,
+            "message": "Meetings longer than 4 hours should be split into multiple sessions for better productivity"
+        },
+        {
+            "id": "buffer_time",
+            "name": "Buffer Time Between Meetings",
+            "severity": "warning",
+            "enabled": true,
+            "min_minutes": 5,
+            "message": "Recommended to have at least 5-minute buffer between back-to-back meetings"
+        },
+        {
+            "id": "business_hours",
+            "name": "Business Hours Compliance",
+            "severity": "warning",
+            "enabled": true,
+            "start_time": "09:00",
+            "end_time": "17:00",
+            "message": "Meeting scheduled outside typical business hours (9 AM - 5 PM)"
+        },
+        {
+            "id": "large_meeting_approval",
+            "name": "Large Meeting Approval Required",
+            "severity": "error",
+            "enabled": true,
+            "min_attendees": 20,
+            "message": "Meetings with 20+ attendees require executive approval before scheduling"
+        },
+        {
+            "id": "weekend_scheduling",
+            "name": "Weekend Scheduling",
+            "severity": "warning",
+            "enabled": true,
+            "message": "Meeting scheduled on weekend - ensure attendees are aware"
+        },
+        {
+            "id": "late_night_meetings",
+            "name": "Late Night Meeting Warning",
+            "severity": "warning",
+            "enabled": true,
+            "after_hour": 20,
+            "message": "Meeting scheduled after 8 PM - consider attendee timezones"
+        },
+        {
+            "id": "early_morning_meetings",
+            "name": "Early Morning Meeting Warning",
+            "severity": "warning",
+            "enabled": true,
+            "before_hour": 7,
+            "message": "Meeting scheduled before 7 AM - consider attendee timezones"
+        },
+        {
+            "id": "minimum_attendees",
+            "name": "Minimum Attendees Required",
+            "severity": "info",
+            "enabled": false,
+            "min_attendees": 2,
+            "message": "Meeting should have at least 2 attendees (consider if 1-on-1 is needed)"
+        }
+    ]
+}
