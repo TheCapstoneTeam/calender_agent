@@ -140,6 +140,24 @@ At this point, your directory should look like this.
 
 ---
 
+## 🧠 Session & Memory
+
+The scheduler agent now wires a persistent session store via SQLite and an in-memory memory service through `scheduler_agent.session_memory`. The root agent attaches `preload_memory_tool` to every turn and uses an `after_agent_callback` to keep conversations synchronized with memory, so your history survives restarts and is replayable through `session_memory_manager`.
+
+The compact session store lives at `data/calendar_agent_sessions.db`, and you can programmatically extend or replay conversations with the helper exported from `scheduler_agent.agent`:
+
+```python
+from scheduler_agent.agent import session_memory_manager
+
+await session_memory_manager.run_session(
+   ["Hi again", "What do you remember from earlier?"],
+   session_id="user-follow-up",
+)
+```
+
+Use `session_memory_manager.search_memory("favorite color")` or `get_session_events` to inspect what the agent persisted from prior conversations.
+
+
 ## ✔️ Setup Complete!
 
 You’re now ready to run the command below:
