@@ -52,6 +52,27 @@ class DataManager:
         except KeyError:
             return []
 
+    def get_user_details(self, email_or_name: str) -> Optional[Dict[str, Any]]:
+        """
+        Returns full details for a specific user by email or username.
+        Case-insensitive match.
+        """
+        if self.users_df.empty:
+            return None
+            
+        query = email_or_name.lower()
+        
+        # Try matching by email first
+        match = self.users_df[self.users_df['email'].str.lower() == query]
+        
+        # If no match, try username
+        if match.empty:
+            match = self.users_df[self.users_df['username'].str.lower() == query]
+            
+        if not match.empty:
+            return match.iloc[0].to_dict()
+        return None
+
     def get_facility_info(self, facility_name: str) -> Optional[Dict[str, Any]]:
         """
         Returns details for a specific facility by name.
