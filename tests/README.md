@@ -38,7 +38,7 @@ pytest tests/test_calendar_tools.py::TestToIso::test_to_iso_with_datetime_and_tz
 
 ## Test Files
 
-- `test_calendar_tools.py` - Tests for calendar_tools.py functions
+- `test_calendar_tools.py` - Tests for tools package functions
   - `TestParseDate` - Date parsing tests
   - `TestParseTime` - Time parsing tests
   - `TestToIso` - UTC/ISO conversion tests
