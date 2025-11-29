@@ -4,31 +4,218 @@
       "username": "Ella Charmed",
       "email": "ellacharmed@gmail.com",
       "dept": "IT",
-      "teams": ["TeamElla", "TeamWonders"]
+      "teams": [
+        "TeamElla",
+        "TeamWonders"
+      ],
+      "country": "Singapore",
+      "timezone": "Asia/Singapore",
+      "preferences": {
+        "working_days": [
+          "Monday",
+          "Tuesday",
+          "Wednesday",
+          "Thursday",
+          "Friday"
+        ],
+        "working_hours": {
+          "start": "09:00",
+          "end": "18:00"
+        },
+        "work_on_holidays": false,
+        "vacation_dates": []
+      }
     },
     {
       "username": "Ella Bella",
       "email": "kkella1211@gmail.com",
       "dept": "IT-DataScience",
-      "teams": ["TeamElla", "TeamWonders"]
+      "teams": [
+        "TeamElla",
+        "TeamWonders"
+      ],
+      "country": "Singapore",
+      "timezone": "Asia/Singapore",
+      "preferences": {
+        "working_days": [
+          "Tuesday",
+          "Wednesday",
+          "Thursday",
+          "Friday",
+          "Saturday"
+        ],
+        "working_hours": {
+          "start": "09:00",
+          "end": "18:00"
+        },
+        "work_on_holidays": false,
+        "vacation_dates": [
+          "2025-12-20",
+          "2025-12-21",
+          "2025-12-22",
+          "2025-12-23",
+          "2025-12-24",
+          "2025-12-25",
+          "2025-12-26",
+          "2025-12-27",
+          "2025-12-28",
+          "2025-12-29",
+          "2025-12-30"
+        ]
+      }
+    },
+    {
+      "username": "Hotmail Ella",
+      "email": "kkella1211@hotmail.com",
+      "dept": "IT-Ops",
+      "teams": [
+        "TeamElla",
+        "TeamWonders"
+      ],
+      "country": "UK",
+      "timezone": "Europe/London",
+      "preferences": {
+        "working_days": [
+          "Monday",
+          "Tuesday",
+          "Wednesday",
+          "Thursday",
+          "Friday"
+        ],
+        "working_hours": {
+          "start": "09:00",
+          "end": "17:00"
+        },
+        "work_on_holidays": false,
+        "vacation_dates": []
+      }
+    },
+    {
+      "username": "Nymeria Arya",
+      "email": "nymeriawolf.arya@gmail.com",
+      "dept": "IT-DataScience",
+      "teams": [
+        "TeamElla",
+        "TeamWonders"
+      ],
+      "country": "USA",
+      "timezone": "America/New_York",
+      "preferences": {
+        "working_days": [
+          "Monday",
+          "Tuesday",
+          "Wednesday",
+          "Thursday",
+          "Friday"
+        ],
+        "working_hours": {
+          "start": "09:00",
+          "end": "17:00"
+        },
+        "work_on_holidays": false,
+        "vacation_dates": []
+      }
+    },
+    {
+      "username": "Wati Sahnan",
+      "email": "wati.sahnan@outlook.com",
+      "dept": "IT-DataScience",
+      "teams": [
+        "TeamElla",
+        "TeamWonders"
+      ],
+      "country": "Singapore",
+      "timezone": "Asia/Singapore",
+      "preferences": {
+        "working_days": [
+          "Monday",
+          "Tuesday",
+          "Wednesday",
+          "Thursday",
+          "Friday"
+        ],
+        "working_hours": {
+          "start": "08:30",
+          "end": "17:30"
+        },
+        "work_on_holidays": false,
+        "vacation_dates": []
+      }
     },
     {
       "username": "Abir Saha",
       "email": "pro1943.235@gmail.com",
       "dept": "IT",
-      "teams": ["TeamWonders"]
+      "teams": [
+        "TeamWonders"
+      ],
+      "country": "India",
+      "timezone": "Asia/Kolkata",
+      "preferences": {
+        "working_days": [
+          "Monday",
+          "Tuesday",
+          "Wednesday",
+          "Thursday",
+          "Friday"
+        ],
+        "working_hours": {
+          "start": "10:00",
+          "end": "19:00"
+        },
+        "work_on_holidays": false,
+        "vacation_dates": []
+      }
     },
     {
       "username": "Ruqaiya Sattar",
       "email": "ruqaiya.sattar345@gmail.com",
       "dept": "IT",
-      "teams": ["TeamWonders"]
+      "teams": [
+        "TeamWonders"
+      ],
+      "country": "Pakistan",
+      "timezone": "Asia/Karachi",
+      "preferences": {
+        "working_days": [
+          "Monday",
+          "Tuesday",
+          "Wednesday",
+          "Thursday",
+          "Friday"
+        ],
+        "working_hours": {
+          "start": "09:00",
+          "end": "17:00"
+        },
+        "work_on_holidays": false,
+        "vacation_dates": []
+      }
     },
     {
       "username": "Abdullah Zunorain",
       "email": "abdullahzunorain2@gmail.com",
       "dept": "Engineering",
-      "teams": ["TeamWonders"]
+      "teams": [
+        "TeamWonders"
+      ],
+      "country": "Pakistan",
+      "timezone": "Asia/Karachi",
+      "preferences": {
+        "working_days": [
+          "Monday",
+          "Tuesday",
+          "Wednesday",
+          "Thursday",
+          "Friday"
+        ],
+        "working_hours": {
+          "start": "09:00",
+          "end": "17:00"
+        },
+        "work_on_holidays": false,
+        "vacation_dates": []
+      }
     }
   ]
 }
