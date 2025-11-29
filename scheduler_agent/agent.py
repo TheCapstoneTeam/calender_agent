@@ -13,58 +13,76 @@ search_tool_instance = GoogleSearchTool(bypass_multi_tools_limit=True)
 root_agent = LlmAgent(
     name="calendar_agent",
     model="gemini-2.5-flash",
-    description="Schedules Google Calendar events after checking holidays on the internet and ensuring conflicts are resolved.",
+    description="Schedules Google Calendar events with mandatory location collection, smart holiday checks, and conflict resolution.",
     instruction=f"""
     {get_current_datetime_context()}
 
     ===============================
-    🔵 HOLIDAY CHECKING (SEARCH-BASED)
+    🔵 MANDATORY LOCATION COLLECTION
     ===============================
 
-    Before scheduling ANY meeting, you MUST check whether the date is a public holiday, national event, festival, or company-wide non-working day.
+    Before performing ANY action — including holiday checking, conflict checking, or scheduling —
+    you MUST confirm the **location (country)** of the meeting attendees.
 
-    You do this by calling the `google_search` tool with a query such as:
-    - "Is <YYYY-MM-DD> a holiday?"
-    - "Holiday on <YYYY-MM-DD> in India?"
-    - "Is tomorrow a holiday in India?"
+    Workflow:
+    - Extract the attendees (emails or names).
+    - Check if their country is known (from user input, email domain, or context).
+    - If NOT known:
+         ➤ STOP immediately.
+         ➤ Ask the user: 
+           "Before I proceed, what is the location (country) of the attendees?"
+         ➤ WAIT for the user response.
+    - Only after the location is confirmed → continue the scheduling workflow.
 
-    After running google_search:
-    
-    ✔ If search results indicate ANY holiday/event:
-       - Do NOT proceed to scheduling.
-       - Inform the user: "This date may be a holiday: <summary>"
-       - Ask: "Do you still want me to schedule the meeting?"  
-       - WAIT for the user's confirmation.
 
-    ✔ If there is no indication of any holiday:
-       - Continue normally with conflict checking and scheduling.
+    ===============================
+    🔵 HOLIDAY CHECKING (SEARCH-BASED, LOCATION-SPECIFIC)
+    ===============================
+
+    After location is known:
+
+    You MUST use `google_search` to check holidays relevant to that exact country.
+
+    Example queries:
+    - "Is <YYYY-MM-DD> a holiday in <country>?"
+    - "<country> public holiday <YYYY-MM-DD>"
+
+    ✔ If any relevant holiday is detected:
+       - Do NOT schedule.
+       - Tell the user: 
+         "This date may be a holiday in <country>: <summary>. Do you still want me to schedule it?"
+       - WAIT for confirmation.
+
+    ✔ If no holiday found → continue normally.
 
 
     ===============================
     🔵 MEETING SCHEDULING WORKFLOW
     ===============================
 
-    When the user wants to schedule a meeting:
-
-    1. Parse:
-       - Date (convert "tomorrow", "next Monday", etc. to YYYY-MM-DD)
+    1. Parse from user:
+       - Date (convert “tomorrow”, “next Monday”, etc. → YYYY-MM-DD)
        - Start time
        - End time or duration
        - Event title
        - Attendees (optional, comma-separated emails)
-       - Target calendar name (default: primary)
+       - Calendar name (default: primary)
 
     2. Validate attendees:
-       - Call `validate_emails` BEFORE doing any scheduling.
-       - If invalid → tell user and wait for correction.
+       - Call `validate_emails`
+       - If invalid → inform user → WAIT.
 
-    3. Holiday Check (ALWAYS BEFORE ANY SCHEDULING)
-       - Use google_search as described above.
+    3. Confirm attendee location (MANDATORY):
+       - Ask user if not known.
 
-    4. Check conflicts:
+    4. Holiday check (location-specific):
+       - As described above.
+
+    5. Check conflicts:
        - Call `check_conflict`.
 
-    5. If free → call `create_event`.
+    6. If no conflict & no holiday block:
+       - Call `create_event`.
 
     ===============================
     Acceptable Formats
@@ -80,3 +98,4 @@ root_agent = LlmAgent(
         search_tool_instance,
     ],
 )
+
