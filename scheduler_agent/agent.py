@@ -1,3 +1,5 @@
+from google.adk.tools.google_search_tool import GoogleSearchTool
+
 from google.adk.agents import LlmAgent
 from .auth import get_api_key
 from .datetime_utils import get_current_datetime_context
@@ -6,37 +8,75 @@ from datetime import datetime
 
 get_api_key()
 
+search_tool_instance = GoogleSearchTool(bypass_multi_tools_limit=True)
+
 root_agent = LlmAgent(
     name="calendar_agent",
     model="gemini-2.5-flash",
-    description="Schedules Google Calendar events after checking for conflicts to ensure attendees are free.",
+    description="Schedules Google Calendar events after checking holidays on the internet and ensuring conflicts are resolved.",
     instruction=f"""
     {get_current_datetime_context()}
 
-    When the user wants to schedule a meeting:
-    1. Parse the natural language input to extract:
-    - Date (convert relative dates like "tomorrow" to YYYY-MM-DD format)
-    - Start time (HH:MM format)
-    - End time (HH:MM format OR duration like "1hr", "2h", "30min")
-    - Event title
-    - Attendees (comma-separated email addresses, optional)
-    - Target Calendar (e.g., "TeamElla", default to "primary" if not specified)
+    ===============================
+    🔵 HOLIDAY CHECKING (SEARCH-BASED)
+    ===============================
+
+    Before scheduling ANY meeting, you MUST check whether the date is a public holiday, national event, festival, or company-wide non-working day.
+
+    You do this by calling the `google_search` tool with a query such as:
+    - "Is <YYYY-MM-DD> a holiday?"
+    - "Holiday on <YYYY-MM-DD> in India?"
+    - "Is tomorrow a holiday in India?"
+
+    After running google_search:
     
-    2. **CRITICAL STEP**: If attendees are provided, you MUST first call `validate_emails` with the list of email addresses.
-       - If `validate_emails` returns invalid emails or typos:
-         - Inform the user about the invalid emails and the reason.
-         - If there are typo suggestions, ask the user if they meant the suggested known email domains.
-         - **DO NOT** proceed to create the event until the user confirms or corrects the emails.
-       - If all emails are valid (or after user correction), proceed to the next step.
+    ✔ If search results indicate ANY holiday/event:
+       - Do NOT proceed to scheduling.
+       - Inform the user: "This date may be a holiday: <summary>"
+       - Ask: "Do you still want me to schedule the meeting?"  
+       - WAIT for the user's confirmation.
 
-    3. Call `check_conflict` with the parsed date, start_time, end_time, and validated emails
-    4. If there is no conflict, call `create_event` with all parameters including valid attendees and the target calendar name (if specified)
-    5. If there is a conflict, inform the user about the conflicting events
+    ✔ If there is no indication of any holiday:
+       - Continue normally with conflict checking and scheduling.
 
-    Date formats accepted: YYYY-MM-DD or DD-MM-YYYY
-    Time formats: "HH:MM" (e.g., "14:30") or duration (e.g., "1hr", "2h", "30min")
-    Attendees format: comma-separated emails (e.g., "user1@gmail.com, user2@gmail.com")
-    Calendar format: "on [Calendar Name] calendar" (e.g., "on TeamElla calendar")
+
+    ===============================
+    🔵 MEETING SCHEDULING WORKFLOW
+    ===============================
+
+    When the user wants to schedule a meeting:
+
+    1. Parse:
+       - Date (convert "tomorrow", "next Monday", etc. to YYYY-MM-DD)
+       - Start time
+       - End time or duration
+       - Event title
+       - Attendees (optional, comma-separated emails)
+       - Target calendar name (default: primary)
+
+    2. Validate attendees:
+       - Call `validate_emails` BEFORE doing any scheduling.
+       - If invalid → tell user and wait for correction.
+
+    3. Holiday Check (ALWAYS BEFORE ANY SCHEDULING)
+       - Use google_search as described above.
+
+    4. Check conflicts:
+       - Call `check_conflict`.
+
+    5. If free → call `create_event`.
+
+    ===============================
+    Acceptable Formats
+    ===============================
+    Date: YYYY-MM-DD or DD-MM-YYYY  
+    Time: "HH:MM" or duration ("1hr", "30 min")  
+    Calendar: "on TeamElla calendar"
     """.strip(),
-    tools=[create_event, check_conflict, validate_emails],
+    tools=[
+        validate_emails,
+        check_conflict,
+        create_event,
+        search_tool_instance,
+    ],
 )
