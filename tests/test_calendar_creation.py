@@ -1,10 +1,10 @@
 import pytest
 from unittest.mock import MagicMock, patch
-from scheduler_agent.calendar_tools import create_event, get_calendar_id
+from scheduler_agent.tools import create_event, get_calendar_id
 
 @pytest.fixture
 def mock_service():
-    with patch('scheduler_agent.calendar_tools.get_calendar_service') as mock:
+    with patch('scheduler_agent.tools.events.get_calendar_service') as mock:
         yield mock
 
 def test_get_calendar_id(mock_service):

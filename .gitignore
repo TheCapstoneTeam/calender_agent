@@ -3,7 +3,7 @@ __pycache__/
 *.pyc
 .env
 .python-version
-.vscode/settings.json
+
 
 # secrets
 credentials.json
@@ -13,4 +13,3 @@ client_secrets.json
 # scratch/experimental files
 scratch/
 adk_session.typescript*
-

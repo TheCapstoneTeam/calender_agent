@@ -2,7 +2,6 @@
 import os
 import pathlib
 from dotenv import load_dotenv
-from datetime import datetime
 
 # Google OAuth libraries
 from google.auth.transport.requests import Request

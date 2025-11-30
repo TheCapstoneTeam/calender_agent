@@ -1,10 +1,10 @@
 import pytest
 from unittest.mock import MagicMock, patch
-from scheduler_agent.calendar_tools import check_conflict
+from scheduler_agent.tools import check_conflict
 
 @pytest.fixture
 def mock_service():
-    with patch('scheduler_agent.calendar_tools.get_calendar_service') as mock:
+    with patch('scheduler_agent.tools.validation.get_calendar_service') as mock:
         yield mock
 
 def test_check_conflict_multi_calendar(mock_service):
