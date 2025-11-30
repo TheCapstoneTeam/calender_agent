@@ -1,26 +1,96 @@
-# AI Calendar Agent
+# AI Calendar Agent — Autonomous Meeting Scheduling for Enterprise Teams
 
-**Autonomous Meeting Scheduling for Enterprise Teams**
+## ⭐ Problem Statement — Why This Matters
 
-## ⭐ Problem Statement
-
-Scheduling meetings in enterprise environments is **complex and time-consuming**. Consider the challenge of coordinating a meeting for 10+ people across different timezones, while finding an available conference room with the right equipment, checking organizational policies, and avoiding conflicts.
+Scheduling meetings in enterprise environments seems simple… until it isn’t. Teams frequently run into endless back-and-forth with invitees, time zone confusion, double-bookings, and misaligned facility calendars.
 
 **The Traditional Approach:**
 - 🐌 **Slow**: Checking 10 attendees sequentially takes 10+ seconds
 - 🤕 **Error-prone**: Manual timezone conversions, missed conflicts
-- 😓 **Tedious**: Multiple tools (Calendar, Email, Room booking, Policy docs)
+- 😓 **Tedious**: Juggling multiple tools (Calendar, Email, Room booking, Policy docs)
 - 💸 **Costly**: ~100 hours/year wasted on scheduling for a mid-sized company
 
+Most existing solutions (Calendly, Reclaim, etc.) don’t solve real enterprise constraints like proprietary email servers, facility booking, or zero-manual-work integration. And they incur costs! Which increases when team size grows.
+
 **Our Solution:**
-An autonomous AI agent that handles the entire scheduling workflow through intelligent orchestration of specialized sub-agents, reducing scheduling time by **5-10x** while ensuring policy compliance and conflict-free meetings.
- 
+An **autonomous AI agent** that handles the entire scheduling workflow through intelligent orchestration of specialized sub-agents. It reduces scheduling time by **5-10x** while ensuring policy compliance and conflict-free meetings.
 
-## Project Features
+---
 
-### 🤖 Multi-Agent System
+## ⭐ Why Agents? — The Right Approach
 
-Our system uses **Google ADK's hierarchical agent architecture** with a coordinator and four specialized sub-agents that work together to handle complex scheduling tasks:
+Traditional scripts can create events, but they **cannot**:
+* Interpret natural language ("book a meeting tomorrow morning")
+* Negotiate missing details or reason about constraints
+* Autonomously check for conflicts before scheduling
+* Fall back to different workflows when needed
+
+**Agents solve this because they can:**
+* Parse vague requests
+* Call tools to check conflicts and availability
+* Reason about timezones and policies
+* Ask clarifying questions
+
+In enterprise settings, this means a system that is **consistent**, **available 24/7**, and **scalable**.
+
+---
+
+## ⭐ What We Built — System Overview
+
+We built a **Google Calendar–integrated Agent** using **Gemini 2.5-Flash** via the Google ADK. It features a hierarchical multi-agent architecture to handle complex workflows.
+
+### System Architecture Overview
+
+This diagram shows the complete multi-agent system with the **ADK hierarchical sub-agent architecture**.
+
+```mermaid
+graph TB
+    User[👤 User] --> RootAgent[🤖 Calendar Coordinator]
+    
+    subgraph ADK["ADK Sub-Agents"]
+        RootAgent -->|Delegates to| AvailAgent[Availability Checker]
+        RootAgent -->|Delegates to| FacilityAgent[Facility Manager]
+        RootAgent -->|Delegates to| ValidatorAgent[Event Validator]
+        RootAgent -->|Delegates to| CreatorAgent[Event Creator]
+        
+        AvailAgent --> Tools1[check_availability<br/>is_working_time]
+        FacilityAgent --> Tools2[find_facility<br/>get_facility_info]
+        ValidatorAgent --> Tools3[check_policies<br/>check_conflict]
+        CreatorAgent --> Tools4[create_event<br/>validate_emails]
+    end
+    
+    subgraph Persistence["Persistence Layer"]
+        SessionDB[("Sessions DB<br/>SQLite")]
+        MemoryDB[("Memory DB<br/>SQLite")]
+        
+        RootAgent -->|"After each turn"| SessionDB
+        RootAgent -->|"Auto-save"| MemoryDB
+        
+        SessionDB -.->|"Resumable workflows"| RootAgent
+        MemoryDB -.->|"Long-term context"| RootAgent
+    end
+    
+    subgraph External["External Services"]
+        Tools1 --> GoogleAPI[Google Calendar API]
+        Tools1 --> GoogleSearch["Google Search<br/>for Holidays"]
+        Tools1 --> UserPrefs["users.json<br/>Preferences"]
+        Tools3 --> GoogleAPI
+        Tools4 --> GoogleAPI
+        ValidatorAgent --> PolicyJSON[policies.json]
+    end
+    
+    style RootAgent fill:#2e7d32,stroke:#1b5e20,stroke-width:3px,color:#fff
+    style AvailAgent fill:#1565c0,stroke:#0d47a1,stroke-width:2px,color:#fff
+    style FacilityAgent fill:#1565c0,stroke:#0d47a1,stroke-width:2px,color:#fff
+    style ValidatorAgent fill:#e65100,stroke:#bf360c,stroke-width:2px,color:#fff
+    style CreatorAgent fill:#6a1b9a,stroke:#4a148c,stroke-width:2px,color:#fff
+    style SessionDB fill:#ffd54f,stroke:#fbc02d,stroke-width:2px,color:#000
+    style MemoryDB fill:#ffd54f,stroke:#fbc02d,stroke-width:2px,color:#000
+```
+
+### 🤖 Multi-Agent Architecture
+
+Our system uses a coordinator and four specialized sub-agents:
 
 ```
 Calendar Coordinator (Root Agent)
@@ -33,14 +103,23 @@ Calendar Coordinator (Root Agent)
 **Key Benefits:**
 - **Parallel Execution**: Check 10 attendees in ~1.5s instead of 10s (7x faster)
 - **Specialization**: Each sub-agent has focused responsibilities and tools
-- **Scalability**: Add new sub-agents without changing existing code
 - **Fault Isolation**: Sub-agent failures don't crash the entire system
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed diagrams.
+See [docs/architecture.md](docs/architecture.md) for detailed diagrams.
 
-### 🔧 Tools
+### 🧠 Session & Memory Persistence
 
-The agent leverages multiple tools to interact with external systems and data sources:
+The agent maintains context across restarts using SQLite:
+- **Session Persistence**: Every interaction is stored in `data/calendar_agent_sessions.db`, allowing resumable workflows.
+- **Long-term Memory**: Important context is extracted and stored in `data/calendar_agent_memory.db` with Full-Text Search (FTS).
+
+---
+
+## ⭐ The Build — Tools & Implementation
+
+### 🔧 Tools & Capabilities
+
+The agent leverages specialized tools with clean boundaries to interact with external systems:
 
 | Tool Category | Tools | Purpose |
 |--------------|-------|---------|
@@ -49,274 +128,156 @@ The agent leverages multiple tools to interact with external systems and data so
 | **Validation** | `validate_emails`, `check_policies` | Email validation and org policy enforcement |
 | **Intelligence** | `search_holidays`, `get_local_timezone` | Holiday detection via Google Search, timezone handling |
 
-**Function Calling**: All tools are exposed to the LLM via Google ADK's function calling, allowing the agent to autonomously select and execute the right tool for each task.
-
 ### ⚙️ Context Engineering
 
-Long conversations can quickly exhaust token limits. Our **ContextCompactor** optimizes context by intelligently summarizing older messages while preserving recent interactions:
+Long conversations can exhaust token limits. Our **ContextCompactor** optimizes context by intelligently summarizing older messages while preserving recent interactions, reducing token usage by **~70%** without losing continuity.
 
-**Strategy**: Summary + Recent Window
-- Compacts 50+ message histories into a concise summary
-- Keeps the last N messages for immediate context
-- Reduces token usage by ~70% without losing continuity
+### 🔍 Observability: Chain-of-Thought
 
-**Example** (from `demo/run_demo.py`):
-```python
-compacted = context_compactor.compact_messages(messages)
-# Original: 55 messages (5,500 tokens)
-# Compacted: Summary + 10 recent messages (1,500 tokens)
-# Savings: ~73% tokens
+Transparency is critical. Our **ReasoningEngine** implements Chain-of-Thought (CoT) to make decision-making visible, logging thoughts like `[PLANNING]`, `[DECISION]`, and `[VALIDATION]` to trace the agent's reasoning process.
+
+### Observable Reasoning Flow
+
+How the reasoning engine integrates with the sub-agent system:
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Agent
+    participant Reasoning as ReasoningEngine
+    participant SubAgents as Sub-Agents
+
+    User->>Agent: Schedule meeting
+    Agent->>Reasoning: 💭 [PLANNING] "Analyzing request"
+    
+    Agent->>SubAgents: Start parallel checks
+    SubAgents->>Reasoning: 💭 [DECISION] "Spawning 10 sub-agents"
+    
+    loop For each sub-agent result
+        SubAgents->>Reasoning: 💭 [VALIDATION] "alice@: Available"
+        SubAgents->>Reasoning: 💭 [CONCERN] "bob@: Busy"
+    end
+    
+    SubAgents->>Reasoning: 💭 [ANALYSIS] "8 available, 2 busy (1.42s)"
+    
+    Agent->>Reasoning: 💭 [RECOMMENDATION] "Suggest alternative time"
+    
+    Reasoning-->>User: Show complete reasoning chain
+    Agent-->>User: Final response with context
 ```
-
-This enables long-running conversations without hitting API limits or degrading response quality.
-
-### 🧠 Session & Memory
-
-The scheduler agent wires a persistent session store via SQLite and an in-memory memory service through `scheduler_agent.session_memory`. The root agent attaches `preload_memory_tool` to every turn and uses an `after_agent_callback` to keep conversations synchronized with memory, so your history survives restarts and is replayable through `session_memory_manager`.
-
-The compact session store lives at `data/calendar_agent_sessions.db`, and you can programmatically extend or replay conversations with the helper exported from `scheduler_agent.agent`:
-
-```python
-from scheduler_agent.agent import session_memory_manager
-
-await session_memory_manager.run_session(
-   ["Hi again", "What do you remember from earlier?"],
-   session_id="user-follow-up",
-)
-```
-
-Use `session_memory_manager.search_memory("favorite color")` or `get_session_events` to inspect what the agent persisted from prior conversations.
-
-
-### 🔍 Observability: Chain-of-Thought Reasoning
-
-Transparency is critical for trust in autonomous agents. Our **ReasoningEngine** implements Chain-of-Thought (CoT) to make decision-making visible:
-
-**Thought Types**:
-- 💭 **PLANNING**: High-level strategy ("Analyzing request for 10 attendees")
-- 💭 **DECISION**: Tactical choices ("Spawning 10 parallel sub-agents")
-- 💭 **VALIDATION**: Individual checks ("alice@: Available ✓")
-- 💭 **CONCERN**: Potential issues ("bob@: Busy - 2 conflicts")
-- 💭 **ANALYSIS**: Result synthesis ("8 available, 2 busy (1.42s, 7x speedup)")
-
-**Example Output**:
-```
-💭 [PLANNING] Checking availability for 10 attendees in parallel
-💭 [DECISION] Spawning 10 AvailabilityChecker sub-agents
-💭 [VALIDATION] alice@example.com: Available ✓
-💭 [VALIDATION] bob@example.com: Available ✓
-💭 [CONCERN] carol@example.com: Busy (2 conflicts)
-💭 [ANALYSIS] Results: 8 available, 2 busy (1.42s, ~7.0x speedup)
-```
-
-**Benefits**:
-- 🐛 **Debugging**: Trace exactly where reasoning went wrong
-- 🤝 **Trust**: Users understand why decisions were made
-- 📊 **Metrics**: [future improvements] Measure sub-agent performance in real-tim
 
 ---
 
-# Project Setup Guide
+## ⭐ Project Setup Guide
 
-This project uses **Python 3.14** and a **virtual environment (venv)**.  
-Follow these steps to set up the project on any machine.
+This project uses **Python 3.14** and a **virtual environment**.
 
----
-
-
-## 🚀 0. Clone the Repository
+### 🚀 0. Clone the Repository
 ```bash
 git clone <git@github.com:TheCapstoneTeam/calender_agent.git>
-````
+```
 
----
+### 🔐 1. Setup Authorizations
 
-## 🔐 1. Setup your authorizations
-
-### Get your Google API key
-
-If you have not done so, sign up and create an [API key in Google AI Studio](https://aistudio.google.com/app/api-keys). Create new file named `.env` . Then copy the line below and paste the line and your `api key` in the spot indicated.
-
+**Google API Key**:
+Create a `.env` file and add your key from [Google AI Studio](https://aistudio.google.com/app/api-keys):
 ```bash
 GENAI_API_KEY={your_api_key}
 ```
 
-### Get your Google credentials for the Calendar API
+**Google Calendar Credentials**:
+Follow the [Google Workspace guide](https://developers.google.com/workspace/guides/create-credentials#oauth-client-id) to create OAuth credentials.
 
-Follow the guide in [Create access credentials](https://developers.google.com/workspace/guides/create-credentials#oauth-client-id) from Google Cloud Workspace.
+### 🧰 2. Create Virtual Environment
 
----
+The `venv/` folder is **NOT** committed. Create your own:
 
-## 🧰 2. Create a Virtual Environment (optional if you decide to install the libraries globally)
+**Linux / macOS**:
+```bash
+python3 -m venv venv
+source venv/bin/activate
+# OR using uv
+uv venv
+source .venv/bin/activate
+```
 
-The `venv/` folder is **NOT** committed to GitHub, so each teammate must create their own.
-
-Change directory to `calendar_agent` and activate the `venv`. See default [venv manager](https://docs.python.org/3/library/venv.html) docs in python.
-
-### Windows:
-
+**Windows**:
 ```bash
 python -m venv venv
 venv\Scripts\activate
 ```
 
-### Linux / macOS:
-
+### 📦 3. Install Requirements
 ```bash
-python3 -m venv venv
-source venv/bin/activate
+pip install -r requirements.txt
+# OR
+uv pip install -r requirements.txt
 ```
-OR
-```bash
-uv venv
-source .venv/bin/activate
-```
-
-See [uv docs](https://docs.astral.sh/uv/) for more guides and installation instructions.
 
 ---
 
-## 📦 3. Install Project Requirements
-
-1. Make sure you have activated the virtual environment
-
-1. Run:
-
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-   OR
-
-   ```bash
-   uv pip install -r requirements.txt
-   ```
----
-## 📁 4. Folder Structure
-
-At this point, your directory should look like this.
+## 📁 Folder Structure
 
 ```
 .
-├── README.md
-├── __init__.py
-├── pyproject.toml                 # Project metadata and dependencies
-├── requirements.txt               # Python package dependencies
-├── scheduler_agent/
-│   ├── __pycache__/
-│   ├── agent.py                   # Root ADK agent (coordinates sub-agents)
-│   ├── auth.py                    # Google Calendar OAuth authentication
-│   ├── data_manager.py            # Team/facility data management
-│   ├── datetime_utils.py          # Date/time parsing and timezone handling
-│   ├── email_utils.py             # Email validation utilities
-│   ├── reasoning_engine.py        # Observable reasoning/thinking system
-│   ├── session_memory.py          # 🧠 Session & memory persistence (SQLite)
-│   │
-│   ├── tools/                     # 🔧 Modular tools package 
-│   │   ├── __init__.py
-│   │   ├── availability.py        # Attendee availability checking
-│   │   ├── events.py              # Event creation and management
-│   │   ├── facilities.py          # Meeting room search and booking
-│   │   ├── holidays.py            # 🏖️ Holiday & Vacation logic
-│   │   ├── search.py              # Team member lookup
-│   │   ├── validation.py          # Policy and conflict validation
-│   │
-│   ├── sub_agents/                # 🤖 ADK hierarchical agents
-│   │   ├── __init__.py
-│   │   ├── availability_agent.py  # Sub-agent: Checks availability
-│   │   ├── creator_agent.py       # Sub-agent: Creates events
-│   │   ├── facility_agent.py      # Sub-agent: Manages rooms
-│   │   └── validator_agent.py     # Sub-agent: Validates policies
-│   │
-│   └── parallel_execution/        # ⚡ Performance optimization (async)
-│       ├── __init__.py
-│       ├── README.md              # Explains parallel vs ADK approach
-│       ├── availability_checker.py    # Async availability sub-agent
-│       ├── parallel_coordinator.py    # Orchestrates parallel execution
-│       ├── policy_engine.py           # Configurable policy rules
-│       └── validation_agent.py        # Multi-dimensional validator
+├── data/                          # Static data & SQLite DBs
+│   ├── calendar_agent_sessions.db # 💾 Session persistence
+│   ├── calendar_agent_memory.db   # 💾 Long-term memory
+│   ├── facilities.json            # Room definitions
+│   ├── policies.json              # Org policies
+│   └── users.json                 # Team data
 │
-├── data/                          # Static data files
-│   ├── calendar_agent_sessions.db # 💾 Session persistence (SQLite)
-│   ├── calendar_agent_memory.db   # 💾 Long-term memory (SQLite + FTS)
-│   ├── facilities.json            # Meeting room definitions
-│   ├── policies.json              # Organizational policies
-│   └── users.json                 # Team/user data
+├── docs/                          # Documentation & Diagrams
 │
-├── tests/                         # 🧪 Test suite
-│   ├── README.md
-│   ├── conftest.py                # Pytest fixtures
-│   ├── test_adk_sub_agents.py     # Tests ADK architecture
-│   ├── test_calendar_tools.py     # Tests tool functions
-│   └── test_validation_stage2.py  # Tests validation system
-|
-├── token.json                     # Google OAuth access token (auto-generated)
-└── uv.lock                        # Dependency lock file (if using uv)
+├── scheduler_agent/               # Main Source Code
+│   ├── agent.py                   # Root ADK agent
+│   ├── session_memory.py          # Persistence logic
+│   ├── tools/                     # Modular tools
+│   ├── sub_agents/                # ADK sub-agents
+│   └── parallel_execution/        # Async optimization
+│
+└── tests/                         # Test Suite
 ```
 
 ---
 
+## ✔️ Running the Project
 
-## ✔️ Setup Complete!
+**Run Tests:**
+```bash
+python -m pytest tests/
+```
+*Expected output: `==== 92 passed, 1 skipped, 1 warning in 10.44s ====`*
 
-You’re now ready to run the commands below
-
-Run tests:
-   ```bash
-   python -m pytest tests/         # Run tests
-   ```
-
-Expected output:
-
-   ```
-   ==== 92 passed, 1 skipped, 1 warning in 10.44s  ====
-   ```
-
-Run the agent:
-   ```bash
-   adk run scheduler_agent         # Run the agent
-   ```
-
+**Run the Agent:**
+```bash
+adk run scheduler_agent
+```
 
 ---
-
 
 ## 🔍 Inspecting Data
 
-The agent stores data in SQLite databases located in the `data/` directory:
-- `data/calendar_agent_sessions.db`: Stores session history.
-- `data/calendar_agent_memory.db`: Stores agent memories.
-
-You can inspect these files using various tools:
-
-### VS Code
-1. Install the **SQLite Viewer** extension (by Florian Klampfer).
-2. Click on a `.db` or `.sqlite` in the Explorer
-2. A new panel would open to show database's contents.
-
-### DBeaver
-1. Create a new connection and select **SQLite**.
-2. Browse to the `data/` folder and select the `.db` file.
-3. Connect and browse tables in the Database Navigator.
-
-### SQLiteStudio
-1. Click **Database** > **Add a database**.
-2. Select the `.db` file from the `data/` directory.
-3. Double-click the table names to view data.
-
+The agent stores data in `data/`. We recommend using the **SQLite Viewer** extension in VS Code to inspect `calendar_agent_sessions.db` and `calendar_agent_memory.db`.
 
 ---
 
-## 📝 Notes
+## ⭐ Future Improvements
 
-* Never commit your `venv/` folder.
-* Always activate your venv before running scripts.
-* `pyproject.toml` and `*.lock` are present if you use `uv` as your python manager (or another environment manager that uses the `pyproject.toml` file).
-* `token.json` file will be created when you're running the `adk run` command for the first time, and have successfully authorized the agent to access your Google Calendar
-* If you install new packages, update `requirements.txt` using:
+### Phase 2 — Enterprise-Scale
+* **CRUD Operations**: List, Update, and Delete events/teams.
+* **Smart Booking**: Automatic negotiation of best common free slots.
+* **Resource Management**: Booking vehicles, labs, and equipment.
 
-```bash
-pip freeze > requirements.txt
-```
+### Phase 3 — Fully Autonomous
+* **Proactive Scheduling**: Agent contacts participants and proposes times.
+* **Security**: Granular authorizations and permissions.
 
 ---
+
+## Contributors
+
+- [Ella](https://github.com/ellacharmed): ideas, coding, testing, documentation, project management, presentation
+- [Abir](https://github.com/Pro1943): coding, testing, documentation, 
+- [Abdullah](https://github.com/abdullahzunorain): coding, testing
+- [Ruqaiya](https://github.com/ruqaiyasattar): idea, documentation, presentation(?)
