@@ -1,17 +1,19 @@
 from __future__ import annotations
 
+import json
+import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Sequence, Optional, Callable, Any, List
+from typing import Sequence, Optional, Callable, Any, List, Dict
 
-from google.adk.memory import InMemoryMemoryService, MemoryService
+from google.adk.memory import BaseMemoryService
 from google.adk.sessions import DatabaseSessionService
 from google.adk.runners import Runner
 from google.genai import types
 
 
-
 DEFAULT_SESSION_DB_NAME = "calendar_agent_sessions.db"
+DEFAULT_MEMORY_DB_NAME = "calendar_agent_memory.db"
 
 
 @dataclass
@@ -20,6 +22,7 @@ class SessionMemoryConfig:
     user_id: str = "default"
     default_session_id: str = "default"
     session_db_name: str = DEFAULT_SESSION_DB_NAME
+    memory_db_name: str = DEFAULT_MEMORY_DB_NAME
     storage_dir: Optional[Path | str] = None
 
     def storage_path(self) -> Path:
@@ -31,19 +34,149 @@ class SessionMemoryConfig:
         base_dir.mkdir(parents=True, exist_ok=True)
         return base_dir
 
-    def database_url(self) -> str:
+    def session_db_url(self) -> str:
         db_file = self.storage_path() / self.session_db_name
-        return f"sqlite:///{db_file.as_posix()}"
+        return f"sqlite+aiosqlite:///{db_file.as_posix()}"
+
+    def memory_db_path(self) -> Path:
+        return self.storage_path() / self.memory_db_name
+
+
+class SQLiteMemoryService(BaseMemoryService):
+    """
+    A persistent memory service backed by SQLite.
+    Stores session summaries and structured memories.
+    """
+
+    def __init__(self, db_path: Path):
+        super().__init__()
+        self.db_path = db_path
+        self._init_db()
+
+    def _init_db(self):
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS memories (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    app_name TEXT,
+                    user_id TEXT,
+                    session_id TEXT,
+                    content TEXT,
+                    metadata TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+                """
+            )
+            # Simple full-text search support
+            conn.execute(
+                """
+                CREATE VIRTUAL TABLE IF NOT EXISTS memories_fts USING fts5(content, content='memories')
+                """
+            )
+            conn.execute(
+                """
+                CREATE TRIGGER IF NOT EXISTS memories_ai AFTER INSERT ON memories BEGIN
+                  INSERT INTO memories_fts(rowid, content) VALUES (new.id, new.content);
+                END;
+                """
+            )
+
+    async def add_session_to_memory(self, session: Any) -> None:
+        """
+        Persist relevant parts of the session to memory.
+        For this simple implementation, we'll extract the last turn or summary.
+        """
+        # In a real implementation, we might use an LLM to summarize the session
+        # or extract key facts. Here we just store the raw text of the last few turns.
+        if not hasattr(session, "events"):
+            return
+
+        events = list(session.events)
+        if not events:
+            return
+
+        # Simple extraction: Store the last user-model exchange as a memory unit
+        # This is a naive implementation for demonstration.
+        content_parts = []
+        for event in events[-2:]: # Last 2 events
+            text = self._extract_text(event)
+            if text:
+                role = getattr(event, "author", "unknown")
+                content_parts.append(f"{role}: {text}")
+        
+        if not content_parts:
+            return
+
+        memory_content = "\n".join(content_parts)
+        
+        # Metadata
+        metadata = {
+            "session_id": getattr(session, "id", "unknown"),
+            "event_count": len(events)
+        }
+
+        self._insert_memory(
+            app_name="calendar_agent", # Should ideally come from config/context
+            user_id="default", # Should come from context
+            session_id=getattr(session, "id", "unknown"),
+            content=memory_content,
+            metadata=metadata
+        )
+
+    def _insert_memory(self, app_name: str, user_id: str, session_id: str, content: str, metadata: Dict[str, Any]):
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute(
+                "INSERT INTO memories (app_name, user_id, session_id, content, metadata) VALUES (?, ?, ?, ?, ?)",
+                (app_name, user_id, session_id, content, json.dumps(metadata))
+            )
+
+    async def search_memory(self, app_name: str, user_id: str, query: str, limit: int = 5) -> Any:
+        """Search memories using FTS."""
+        # Return a structure compatible with what the agent expects (e.g. list of objects with 'text' attribute)
+        # The base class or agent might expect a specific return type. 
+        # For now, returning a simple object wrapper.
+        
+        results = []
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.execute(
+                """
+                SELECT content, metadata, created_at FROM memories 
+                WHERE id IN (SELECT rowid FROM memories_fts WHERE memories_fts MATCH ? ORDER BY rank)
+                LIMIT ?
+                """,
+                (query, limit)
+            )
+            for row in cursor:
+                results.append(type('MemoryResult', (), {'text': row[0], 'metadata': json.loads(row[1]), 'created_at': row[2]}))
+        
+        return type('MemoryResponse', (), {'memories': results})
+
+    def _extract_text(self, event: Any) -> Optional[str]:
+        # Helper to extract text from event object
+        content = getattr(event, "content", None)
+        if not content or not getattr(content, "parts", None):
+            return None
+        part = content.parts[0]
+        return getattr(part, "text", None)
 
 
 def build_persistent_session_service(config: SessionMemoryConfig) -> DatabaseSessionService:
     """Create or open the SQLite session store defined by the config."""
-    return DatabaseSessionService(db_url=config.database_url())
+    try:
+        url = config.session_db_url()
+        print(f"DEBUG: Attempting to create DatabaseSessionService with URL: {url}")
+        return DatabaseSessionService(db_url=url)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        print(f"DEBUG: Failed to create DatabaseSessionService: {e}")
+        raise
 
 
-def build_memory_service() -> InMemoryMemoryService:
-    """Return the default in-memory memory service for prototyping."""
-    return InMemoryMemoryService()
+def build_memory_service(config: SessionMemoryConfig) -> SQLiteMemoryService:
+    """Return the persistent SQLite memory service."""
+    return SQLiteMemoryService(db_path=config.memory_db_path())
 
 
 async def auto_save_session_to_memory(callback_context: Any) -> None:
@@ -72,7 +205,7 @@ class SessionMemoryManager:
         self,
         runner: Runner,
         session_service: DatabaseSessionService,
-        memory_service: Optional[MemoryService],
+        memory_service: Optional[BaseMemoryService],
         config: SessionMemoryConfig,
     ) -> None:
         self.runner = runner
@@ -180,4 +313,5 @@ __all__ = [
     "build_memory_service",
     "auto_save_session_to_memory",
     "SessionMemoryManager",
+    "SQLiteMemoryService",
 ]

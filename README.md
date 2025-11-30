@@ -1,3 +1,26 @@
+
+## Project Features
+
+### 
+
+### 🧠 Session & Memory
+
+The scheduler agent wires a persistent session store via SQLite and an in-memory memory service through `scheduler_agent.session_memory`. The root agent attaches `preload_memory_tool` to every turn and uses an `after_agent_callback` to keep conversations synchronized with memory, so your history survives restarts and is replayable through `session_memory_manager`.
+
+The compact session store lives at `data/calendar_agent_sessions.db`, and you can programmatically extend or replay conversations with the helper exported from `scheduler_agent.agent`:
+
+```python
+from scheduler_agent.agent import session_memory_manager
+
+await session_memory_manager.run_session(
+   ["Hi again", "What do you remember from earlier?"],
+   session_id="user-follow-up",
+)
+```
+
+Use `session_memory_manager.search_memory("favorite color")` or `get_session_events` to inspect what the agent persisted from prior conversations.
+
+
 # Project Setup Guide
 
 This project uses **Python 3.14** and a **virtual environment (venv)**.  
@@ -73,8 +96,6 @@ At this point, your directory should look like this.
 .
 ├── README.md
 ├── __init__.py
-├── credentials.json              # Google OAuth client credentials
-├── main.py                        # Entry point for CLI/manual testing
 ├── pyproject.toml                 # Project metadata and dependencies
 ├── requirements.txt               # Python package dependencies
 ├── scheduler_agent/
@@ -85,17 +106,18 @@ At this point, your directory should look like this.
 │   ├── datetime_utils.py          # Date/time parsing and timezone handling
 │   ├── email_utils.py             # Email validation utilities
 │   ├── reasoning_engine.py        # Observable reasoning/thinking system
+│   ├── session_memory.py          # 🧠 Session & memory persistence (SQLite)
 │   │
-│   ├── tools/                     # 🔧 Modular tools package (SOLID)
+│   ├── tools/                     # 🔧 Modular tools package 
 │   │   ├── __init__.py
 │   │   ├── availability.py        # Attendee availability checking
 │   │   ├── events.py              # Event creation and management
 │   │   ├── facilities.py          # Meeting room search and booking
 │   │   ├── holidays.py            # 🏖️ Holiday & Vacation logic
 │   │   ├── search.py              # Team member lookup
-│   │   └── validation.py          # Policy and conflict validation
+│   │   ├── validation.py          # Policy and conflict validation
 │   │
-│   ├── sub_agents/                # 🤖 ADK hierarchical agents (Capstone)
+│   ├── sub_agents/                # 🤖 ADK hierarchical agents
 │   │   ├── __init__.py
 │   │   ├── availability_agent.py  # Sub-agent: Checks availability
 │   │   ├── creator_agent.py       # Sub-agent: Creates events
@@ -111,15 +133,11 @@ At this point, your directory should look like this.
 │       └── validation_agent.py        # Multi-dimensional validator
 │
 ├── data/                          # Static data files
+│   ├── calendar_agent_sessions.db # 💾 Session persistence (SQLite)
+│   ├── calendar_agent_memory.db   # 💾 Long-term memory (SQLite + FTS)
 │   ├── facilities.json            # Meeting room definitions
 │   ├── policies.json              # Organizational policies
 │   └── users.json                 # Team/user data
-│
-├── examples/                      # 📚 Demo scripts
-│   ├── README.md                  # How to run demos
-│   ├── adk_agent_demo.py          # Shows ADK architecture
-│   ├── parallel_availability_demo.py  # Shows 5-10x speedup
-│   └── validation_demo.py         # Shows comprehensive validation
 │
 ├── tests/                         # 🧪 Test suite
 │   ├── README.md
@@ -127,35 +145,12 @@ At this point, your directory should look like this.
 │   ├── test_adk_sub_agents.py     # Tests ADK architecture
 │   ├── test_calendar_tools.py     # Tests tool functions
 │   └── test_validation_stage2.py  # Tests validation system
-│
-├── docs/                          # 📖 Documentation
-│   ├── agent_diagrams.md          # Architecture diagrams
-│   ├── advanced_agent_concepts.md # Deep dive on patterns
-│   └── ...
-│
-├── test_timezone.py               # Timezone testing utility
+|
 ├── token.json                     # Google OAuth access token (auto-generated)
 └── uv.lock                        # Dependency lock file (if using uv)
 ```
 
 ---
-
-## 🧠 Session & Memory
-
-The scheduler agent now wires a persistent session store via SQLite and an in-memory memory service through `scheduler_agent.session_memory`. The root agent attaches `preload_memory_tool` to every turn and uses an `after_agent_callback` to keep conversations synchronized with memory, so your history survives restarts and is replayable through `session_memory_manager`.
-
-The compact session store lives at `data/calendar_agent_sessions.db`, and you can programmatically extend or replay conversations with the helper exported from `scheduler_agent.agent`:
-
-```python
-from scheduler_agent.agent import session_memory_manager
-
-await session_memory_manager.run_session(
-   ["Hi again", "What do you remember from earlier?"],
-   session_id="user-follow-up",
-)
-```
-
-Use `session_memory_manager.search_memory("favorite color")` or `get_session_events` to inspect what the agent persisted from prior conversations.
 
 
 ## ✔️ Setup Complete!
@@ -166,6 +161,33 @@ You’re now ready to run the command below:
    uv run python tests/
    adk run scheduler_agent
    ```
+---
+
+
+
+## 🔍 Inspecting Data
+
+The agent stores data in SQLite databases located in the `data/` directory:
+- `data/calendar_agent_sessions.db`: Stores session history.
+- `data/calendar_agent_memory.db`: Stores agent memories.
+
+You can inspect these files using various tools:
+
+### VS Code
+1. Install the **SQLite** extension (by alexcvzz) or **SQLite Viewer**.
+2. Open the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`).
+3. Type `SQLite: Open Database` and select the `.db` file.
+4. Use the SQLite Explorer in the sidebar to browse tables and data.
+
+### DBeaver
+1. Create a new connection and select **SQLite**.
+2. Browse to the `data/` folder and select the `.db` file.
+3. Connect and browse tables in the Database Navigator.
+
+### SQLiteStudio
+1. Click **Database** > **Add a database**.
+2. Select the `.db` file from the `data/` directory.
+3. Double-click the table names to view data.
 
 
 ---
