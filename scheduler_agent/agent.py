@@ -1,6 +1,8 @@
 from google.adk.tools.google_search_tool import GoogleSearchTool
-
+from google.adk.tools.load_memory_tool import load_memory_tool
+from google.adk.tools.preload_memory_tool import preload_memory_tool
 from google.adk.agents import LlmAgent
+from google.adk.runners import Runner
 from .auth import get_api_key
 from .datetime_utils import get_current_datetime_context
 from .email_utils import validate_emails
@@ -18,8 +20,16 @@ from .tools import (
     find_facility,
     get_facility_info,
 )
-from datetime import datetime
+from .session_memory import (
+    SessionMemoryConfig,
+    build_persistent_session_service,
+    build_memory_service,
+    SessionMemoryManager,
+    auto_save_session_to_memory,
+)
+
 import os
+
 
 get_api_key()
 
@@ -193,5 +203,28 @@ root_agent = LlmAgent(
         get_user_details,
         find_facility,
         get_facility_info,
+        load_memory_tool,
+        preload_memory_tool,
     ],
+    after_agent_callback=auto_save_session_to_memory,
+)
+
+SESSION_CONFIG = SessionMemoryConfig(
+    app_name=root_agent.name,
+    user_id=os.getenv("CALENDAR_AGENT_USER_ID", "default"),
+)
+
+session_service = build_persistent_session_service(SESSION_CONFIG)
+memory_service = build_memory_service()
+runner = Runner(
+    agent=root_agent,
+    app_name=root_agent.name,
+    session_service=session_service,
+    memory_service=memory_service,
+)
+session_memory_manager = SessionMemoryManager(
+    runner=runner,
+    session_service=session_service,
+    memory_service=memory_service,
+    config=SESSION_CONFIG,
 )
