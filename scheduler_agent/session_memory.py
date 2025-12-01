@@ -137,18 +137,47 @@ class SQLiteMemoryService(BaseMemoryService):
         # The base class or agent might expect a specific return type. 
         # For now, returning a simple object wrapper.
         
+        # Sanitize query for FTS5 (remove special characters that might break syntax)
+        # We keep alphanumeric and spaces.
+        import re
+        safe_query = re.sub(r'[^a-zA-Z0-9\s]', '', query)
+        
+        # If query becomes empty after sanitization, return empty results
+        if not safe_query.strip():
+             return type('MemoryResponse', (), {'memories': []})
+
         results = []
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.execute(
-                """
-                SELECT content, metadata, created_at FROM memories 
-                WHERE id IN (SELECT rowid FROM memories_fts WHERE memories_fts MATCH ? ORDER BY rank)
-                LIMIT ?
-                """,
-                (query, limit)
-            )
-            for row in cursor:
-                results.append(type('MemoryResult', (), {'text': row[0], 'metadata': json.loads(row[1]), 'created_at': row[2]}))
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                # Use the sanitized query
+                cursor = conn.execute(
+                    """
+                    SELECT content, metadata, created_at FROM memories 
+                    WHERE id IN (SELECT rowid FROM memories_fts WHERE memories_fts MATCH ? ORDER BY rank)
+                    LIMIT ?
+                    """,
+                    (safe_query, limit)
+                )
+                for row in cursor:
+                    # Construct a mock object that mimics the expected structure
+                    # memory.content.parts[0].text
+                    # memory.timestamp
+                    
+                    part = type('Part', (), {'text': row[0]})
+                    content = type('Content', (), {'parts': [part]})
+                    
+                    results.append(type('MemoryResult', (), {
+                        'text': row[0], 
+                        'metadata': json.loads(row[1]), 
+                        'created_at': row[2],
+                        'timestamp': row[2],
+                        'content': content,
+                        'author': None # Add author alias for preload_memory_tool
+                    }))
+        except Exception as e:
+            print(f"DEBUG: Error in search_memory: {e}")
+            # Return empty list on error to prevent crash
+            return type('MemoryResponse', (), {'memories': []})
         
         return type('MemoryResponse', (), {'memories': results})
 

@@ -265,6 +265,7 @@ The agent stores data in `data/`. We recommend using the **SQLite Viewer** exten
 ## ⭐ Future Improvements
 
 ### Phase 2 — Enterprise-Scale
+* **Fuzzy Search**: Better and more robust search capibility for team or facility names.
 * **CRUD Operations**: List, Update, and Delete events/teams.
 * **Smart Booking**: Automatic negotiation of best common free slots.
 * **Resource Management**: Booking vehicles, labs, and equipment.
@@ -280,4 +281,4 @@ The agent stores data in `data/`. We recommend using the **SQLite Viewer** exten
 - [Ella](https://github.com/ellacharmed): ideas, coding, testing, documentation, project management, presentation
 - [Abir](https://github.com/Pro1943): coding, testing, documentation, 
 - [Abdullah](https://github.com/abdullahzunorain): coding, testing
-- [Ruqaiya](https://github.com/ruqaiyasattar): idea, documentation, presentation(?)
+- [Ruqaiya](https://github.com/ruqaiyasattar): idea, 

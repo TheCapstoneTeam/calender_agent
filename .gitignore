@@ -3,7 +3,7 @@ __pycache__/
 *.pyc
 .env
 .python-version
-
+*lock
 
 # secrets
 credentials.json
