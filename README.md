@@ -254,6 +254,11 @@ python -m pytest tests/
 adk run scheduler_agent
 ```
 
+**Run the demo:**
+```bash
+# get sessionID from `calendar_agent_memory.db` of the last `adk run` to replay
+python demo.py --replay demo-session-1764556469 
+```
 ---
 
 ## 🔍 Inspecting Data
