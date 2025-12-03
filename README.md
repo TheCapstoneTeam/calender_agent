@@ -1,5 +1,9 @@
 # AI Calendar Agent — Autonomous Meeting Scheduling for Enterprise Teams
 
+This repository  is our submission for the [5-Day AI Agents Intensive Course with Google](https://www.kaggle.com/learn-guide/5-day-agents) course Capstone.
+
+It accompanies our writeup [here](https://www.kaggle.com/competitions/agents-intensive-capstone-project/writeups/ai-calendar-agent).
+
 ## ⭐ Problem Statement — Why This Matters
 
 Scheduling meetings in enterprise environments seems simple… until it isn’t. Teams frequently run into endless back-and-forth with invitees, time zone confusion, double-bookings, and misaligned facility calendars.
