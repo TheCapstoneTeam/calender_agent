@@ -1,0 +1,814 @@
+manifest:
+  version: "0.1.3"
+  schema: https://a2as.org/cert/schema
+  subject:
+    name: thecapstoneteam/calender_agent
+    source: https://github.com/thecapstoneteam/calender_agent
+    branch: main
+    commit: "e3f8115b"
+    scope: [scheduler_agent/agent.py, scheduler_agent/auth.py, scheduler_agent/datetime_utils.py, scheduler_agent/email_utils.py,
+      scheduler_agent/parallel_execution/validation_agent.py, scheduler_agent/session_memory.py, scheduler_agent/sub_agents/__init__.py,
+      scheduler_agent/sub_agents/availability_agent.py, scheduler_agent/sub_agents/creator_agent.py, scheduler_agent/sub_agents/facility_agent.py,
+      scheduler_agent/sub_agents/validator_agent.py, scheduler_agent/tools/__init__.py, scheduler_agent/tools/events.py, scheduler_agent/tools/facilities.py,
+      scheduler_agent/tools/holidays.py, scheduler_agent/tools/search.py]
+  issued:
+    by: A2AS.org
+    at: '2026-02-11T16:46:31Z'
+    url: https://a2as.org/certified/agents/thecapstoneteam/calender_agent
+  signatures:
+    digest: sha256:I5RNrhQe5u4rFRNZdnQ4aI1ZCCd5tCK38-llkh7QRTo
+    key: ed25519:AFtiffJOwtWneqi2YwXic3J9c5dRARZ_zE0X7tXAGgg
+    sig: ed25519:kH5PT2_HMSmHxYW7sjAcaSZVsm2LugM7zl7ANyCTnp3lhUlrWNGHaSnRdIBStTgrX8XAmxqkFhRkVImn2XZWBg
+
+agents:
+  availability_checker_agent:
+    type: instance
+    models: [gemini-2.0-flash]
+    tools: [check_attendees_availability, get_team_members]
+    params:
+      name: availability_checker
+      description: Checks calendar availability for meeting attendees and resolves team names to individual emails
+      instruction: strip()
+  event_creator_agent:
+    type: instance
+    models: [gemini-2.0-flash]
+    tools: [create_event, validate_emails]
+    params:
+      name: event_creator
+      description: Creates calendar events after validation, ensuring all details are correct
+      instruction: strip()
+  event_validator_agent:
+    type: instance
+    models: [gemini-2.0-flash]
+    tools: [check_policies, check_conflict]
+    params:
+      name: event_validator
+      description: Validates events against organizational policies and checks for calendar conflicts
+      instruction: strip()
+  facility_manager_agent:
+    type: instance
+    models: [gemini-2.0-flash]
+    tools: [find_facility, get_facility_info]
+    params:
+      name: facility_manager
+      description: Manages meeting room and facility booking based on requirements
+  root_agent:
+    type: instance
+    models: [gemini-2.5-flash]
+    tools: [search_tool_instance, validate_emails, check_conflict, create_event, get_team_members, get_user_details, find_facility,
+      get_facility_info, load_memory, preload_memory]
+    params:
+      name: calendar_coordinator
+      description: Coordinates calendar scheduling by delegating to specialized sub-agents, with mandatory location collection
+        and smart holiday checking.
+      instruction: strip()
+      after_agent_callback: auto_save_session_to_memory
+      sub_agents: [availability_checker_agent, facility_manager_agent, event_validator_agent, event_creator_agent]
+
+models:
+  gemini-2.0-flash:
+    type: literal
+    agents: [event_validator_agent, facility_manager_agent, event_creator_agent, availability_checker_agent]
+  gemini-2.5-flash:
+    type: literal
+    agents: [root_agent]
+
+tools:
+  check_attendees_availability:
+    type: function
+    agents: [availability_checker_agent]
+    params:
+      description: |-
+        Check if attendees are available during the specified time slot using Google Calendar FreeBusy API.
+        Also checks working hours and holidays preferences.
+
+        Args:
+            attendees: Comma-separated email addresses
+            date: Date string (DD-MM-YYYY or YYYY-MM-DD)
+            start_time: Start time "11:15"
+            end_time: End time "13:15" OR duration like "2hr"
+            organizer_tz: Timezone name (e.g., 'Asia/Singapore'). If None, uses system timezone
+
+        Returns:
+            Dictionary with availability information:
+            {
+                "all_free": bool,
+                "busy_attendees": {"email@example.com": [{"start": "...", "end": "..."}], ...},
+                "free_attendees": ["email@example.com", ...],
+                "start": iso_string,
+                "end": iso_string
+            }
+  check_conflict:
+    type: function
+    agents: [event_validator_agent, root_agent]
+    params:
+      description: |-
+        Checks overlapping events across ALL user calendars using UTC timezone.
+
+        Args:
+            date: Date string (DD-MM-YYYY or YYYY-MM-DD)
+            start_time: Start time "11:15"
+            end_time: End time "13:15" OR duration "2hr"
+            timezone: Timezone name (e.g., 'Asia/Singapore'). If None, uses system timezone.
+
+        Returns:
+            Dictionary with conflict status and event details
+  check_policies:
+    type: function
+    agents: [event_validator_agent]
+    params:
+      description: |-
+        Check event against organizational policies.
+
+        Args:
+            duration_hours: Meeting duration in hours
+            attendee_count: Number of attendees
+            start_hour: Start hour (0-23)
+            day_of_week: Day name (e.g., "Monday", "Saturday")
+
+        Returns:
+            {
+                "allowed": bool,
+                "violations": [...],
+                "warnings": [...]
+            }
+  create_event:
+    type: function
+    agents: [event_creator_agent, root_agent]
+    params:
+      description: |-
+        Creates event with timezone-aware times in UTC.
+
+        Args:
+            title: Event title
+            date: Date string (DD-MM-YYYY or YYYY-MM-DD)
+            start_time: Start time "11:15"
+            end_time: End time "13:15" OR duration like "2hr"
+            attendees: Comma-separated email addresses (optional)
+            calendar_name: Name of the calendar to create event on (default: "primary")
+
+        Returns:
+            Dictionary with event details including UTC timestamps
+  find_facility:
+    type: function
+    agents: [facility_manager_agent, root_agent]
+    params:
+      description: Finds facilities matching minimum capacity and containing ALL specified amenities.
+  get_facility_info:
+    type: function
+    agents: [facility_manager_agent, root_agent]
+    params:
+      description: Returns details for a specific facility by name.
+  get_team_members:
+    type: function
+    agents: [root_agent, availability_checker_agent]
+    params:
+      description: |-
+        Returns a list of email addresses for members of the specified team.
+        Case-insensitive match on team name.
+  get_user_details:
+    type: function
+    agents: [root_agent]
+    params:
+      description: |-
+        Returns full details for a specific user by email or username.
+        Case-insensitive match.
+  load_memory:
+    type: function
+    agents: [root_agent]
+  preload_memory:
+    type: function
+    agents: [root_agent]
+  search_tool_instance:
+    type: function
+    agents: [root_agent]
+  validate_emails:
+    type: function
+    agents: [event_creator_agent, root_agent]
+    params:
+      description: |-
+        Validates a list of email addresses.
+
+        Checks for:
+        1. Syntax and deliverability (DNS check)
+        2. Disposable email domains
+        3. Common domain typos (e.g. gmai.com -> gmail.com)
+
+        Args:
+            emails: List of email address strings.
+
+        Returns:
+            Dictionary with:
+            - "valid": List of valid email strings.
+            - "invalid": List of dictionaries with "email" and "reason".
+            - "typo_suggestions": List of dictionaries with "original", "suggestion".
+
+teams:
+  root_agent:
+    type: hierarchy
+    agents: [root_agent, availability_checker_agent, facility_manager_agent, event_validator_agent, event_creator_agent]
+
+imports:
+  all_attendees_free: availability.all_attendees_free
+  annotations: __future__.annotations
+  Any: typing.Any
+  asdict: dataclasses.asdict
+  asyncio: asyncio
+  auto_save_session_to_memory: session_memory.auto_save_session_to_memory
+  availability_checker_agent: sub_agents.availability_checker_agent
+  AvailabilityCheckerAgent: availability_checker.AvailabilityCheckerAgent
+  BaseMemoryService: google.adk.memory.BaseMemoryService
+  blocklist: disposable_email_domains.blocklist
+  build: googleapiclient.discovery.build
+  build_memory_service: session_memory.build_memory_service
+  build_persistent_session_service: session_memory.build_persistent_session_service
+  Callable: typing.Callable
+  check_attendees_availability: availability.check_attendees_availability
+  check_attendees_availability_parallel: availability.check_attendees_availability_parallel
+  check_conflict: validation.check_conflict
+  check_policies: validation.check_policies
+  ConflictValidationAgent: parallel_execution.ConflictValidationAgent
+  create_event: events.create_event
+  create_event_with_attendees: events.create_event_with_attendees
+  Credentials: google.oauth2.credentials.Credentials
+  DatabaseSessionService: google.adk.sessions.DatabaseSessionService
+  dataclass: dataclasses.dataclass
+  datetime: datetime.datetime
+  defaultdict: collections.defaultdict
+  Dict: typing.Dict
+  difflib: difflib
+  EmailNotValidError: email_validator.EmailNotValidError
+  Enum: enum.Enum
+  event_creator_agent: sub_agents.event_creator_agent
+  event_validator_agent: sub_agents.event_validator_agent
+  facility_manager_agent: sub_agents.facility_manager_agent
+  find_facility: facilities.find_facility
+  get_api_key: auth.get_api_key
+  get_calendar_id: events.get_calendar_id
+  get_calendar_service: auth.get_calendar_service
+  get_current_datetime_context: datetime_utils.get_current_datetime_context
+  get_data_manager: data_manager.get_data_manager
+  get_facility_info: facilities.get_facility_info
+  get_local_timezone: datetime_utils.get_local_timezone
+  get_team_members: search.get_team_members
+  get_user_details: search.get_user_details
+  GoogleSearchTool: google.adk.tools.google_search_tool.GoogleSearchTool
+  InstalledAppFlow: google_auth_oauthlib.flow.InstalledAppFlow
+  is_holiday: holidays.is_holiday
+  is_working_time: holidays.is_working_time
+  json: json
+  List: typing.List
+  LlmAgent: google.adk.agents.LlmAgent
+  load_dotenv: dotenv.load_dotenv
+  load_memory: google.adk.tools.load_memory
+  Optional: typing.Optional
+  os: os
+  ParallelAvailabilityCoordinator: parallel_coordinator.ParallelAvailabilityCoordinator
+  parse_date: datetime_utils.parse_date
+  parse_time: datetime_utils.parse_time
+  Path: pathlib.Path
+  pathlib: pathlib
+  pd: pandas
+  PolicyEngine: policy_engine.PolicyEngine
+  PolicySeverity: policy_engine.PolicySeverity
+  PolicyViolation: policy_engine.PolicyViolation
+  preload_memory: google.adk.tools.preload_memory
+  re: re
+  ReasoningEngine: reasoning_engine.ReasoningEngine
+  Request: google.auth.transport.requests.Request
+  Runner: google.adk.runners.Runner
+  Sequence: typing.Sequence
+  SessionMemoryConfig: session_memory.SessionMemoryConfig
+  SessionMemoryManager: session_memory.SessionMemoryManager
+  sqlite3: sqlite3
+  ThoughtType: reasoning_engine.ThoughtType
+  time: datetime.time
+  timedelta: datetime.timedelta
+  timezone: datetime.timezone
+  to_iso: datetime_utils.to_iso
+  traceback: traceback
+  types: google.genai.types
+  validate_email: email_validator.validate_email
+  validate_emails: email_utils.validate_emails
+  validate_event_comprehensive: validation.validate_event_comprehensive
+  ValidationDimension: validation_agent.ValidationDimension
+  ValidationResult: validation_agent.ValidationResult
+  ZoneInfo: zoneinfo.ZoneInfo
+
+functions:
+  __init__:
+    type: sync
+    module: scheduler_agent.session_memory
+    args: [self, runner, session_service, memory_service, config]
+    params:
+      returns: None
+  __len__:
+    type: sync
+    module: scheduler_agent.reasoning_engine
+    args: [self]
+    params:
+      returns: int
+  __str__:
+    type: sync
+    module: scheduler_agent.parallel_execution.validation_agent
+    args: [self]
+    params:
+      returns: str
+  _calculate_duration_hours:
+    type: sync
+    module: scheduler_agent.parallel_execution.policy_engine
+    args: [self, start_time, end_time]
+    params:
+      returns: float
+  _check_availability_impl:
+    type: async
+    module: scheduler_agent.parallel_execution.availability_checker
+    args: [self, email, date, start_time, end_time, timezone]
+    params:
+      returns: Dict
+  _check_buffer_time:
+    type: sync
+    module: scheduler_agent.parallel_execution.policy_engine
+    args: [self, policy, event]
+    params:
+      returns: Optional[PolicyViolation]
+  _check_business_hours:
+    type: sync
+    module: scheduler_agent.parallel_execution.policy_engine
+    args: [self, policy, event]
+    params:
+      returns: Optional[PolicyViolation]
+  _check_early_morning:
+    type: sync
+    module: scheduler_agent.parallel_execution.policy_engine
+    args: [self, policy, event]
+    params:
+      returns: Optional[PolicyViolation]
+  _check_freebusy:
+    type: sync
+    module: scheduler_agent.parallel_execution.availability_checker
+    args: [self, email, date, start_time, end_time, timezone]
+    params:
+      returns: Dict
+  _check_in_batches:
+    type: async
+    module: scheduler_agent.parallel_execution.parallel_coordinator
+    args: [self, attendees, date, start_time, end_time, timezone]
+    params:
+      returns: Dict
+  _check_large_meeting:
+    type: sync
+    module: scheduler_agent.parallel_execution.policy_engine
+    args: [self, policy, event]
+    params:
+      returns: Optional[PolicyViolation]
+  _check_late_night:
+    type: sync
+    module: scheduler_agent.parallel_execution.policy_engine
+    args: [self, policy, event]
+    params:
+      returns: Optional[PolicyViolation]
+  _check_max_duration:
+    type: sync
+    module: scheduler_agent.parallel_execution.policy_engine
+    args: [self, policy, event]
+    params:
+      returns: Optional[PolicyViolation]
+  _check_minimum_attendees:
+    type: sync
+    module: scheduler_agent.parallel_execution.policy_engine
+    args: [self, policy, event]
+    params:
+      returns: Optional[PolicyViolation]
+  _check_weekend:
+    type: sync
+    module: scheduler_agent.parallel_execution.policy_engine
+    args: [self, policy, event]
+    params:
+      returns: Optional[PolicyViolation]
+  _emit:
+    type: sync
+    module: scheduler_agent.reasoning_engine
+    args: [self, thought]
+    params:
+      returns: None
+  _extract_text:
+    type: sync
+    module: scheduler_agent.session_memory
+    args: [event]
+    params:
+      returns: Optional[str]
+  _get_service:
+    type: sync
+    module: scheduler_agent.parallel_execution.availability_checker
+    args: [self]
+  _get_session:
+    type: async
+    module: scheduler_agent.session_memory
+    args: [self, session_id]
+  _init_db:
+    type: sync
+    module: scheduler_agent.session_memory
+    args: [self]
+  _insert_memory:
+    type: sync
+    module: scheduler_agent.session_memory
+    args: [self, app_name, user_id, session_id, content, metadata]
+  _load_facilities:
+    type: sync
+    module: scheduler_agent.data_manager
+    args: [self, filepath]
+    params:
+      returns: pd.DataFrame
+  _load_policies:
+    type: sync
+    module: scheduler_agent.parallel_execution.policy_engine
+    args: [self]
+    params:
+      returns: List[Dict]
+  _load_users:
+    type: sync
+    module: scheduler_agent.data_manager
+    args: [self, filepath]
+    params:
+      returns: pd.DataFrame
+  _log_thought:
+    type: sync
+    module: scheduler_agent.parallel_execution.validation_agent
+    args: [self, content, thought_type]
+  _parse_attendees:
+    type: sync
+    module: scheduler_agent.parallel_execution.policy_engine
+    args: [self, attendees]
+    params:
+      returns: List[str]
+  _persist_session_to_memory:
+    type: async
+    module: scheduler_agent.session_memory
+    args: [self, session]
+    params:
+      returns: None
+  _validate_calendar_conflicts:
+    type: async
+    module: scheduler_agent.parallel_execution.validation_agent
+    args: [self, event]
+    params:
+      returns: ValidationResult
+  _validate_policies:
+    type: async
+    module: scheduler_agent.parallel_execution.validation_agent
+    args: [self, event]
+    params:
+      returns: ValidationResult
+  _validate_room_availability:
+    type: async
+    module: scheduler_agent.parallel_execution.validation_agent
+    args: [self, event]
+    params:
+      returns: ValidationResult
+  _validate_timezone:
+    type: async
+    module: scheduler_agent.parallel_execution.validation_agent
+    args: [self, event]
+    params:
+      returns: ValidationResult
+  add_session_to_memory:
+    type: async
+    module: scheduler_agent.session_memory
+    args: [self, session]
+    params:
+      returns: None
+  all_attendees_free:
+    type: sync
+    module: scheduler_agent.tools.availability
+    args: [availability_result]
+    params:
+      returns: bool
+  auto_save_session_to_memory:
+    type: async
+    module: scheduler_agent.session_memory
+    args: [callback_context]
+    params:
+      returns: None
+  build_memory_service:
+    type: sync
+    module: scheduler_agent.session_memory
+    args: [config]
+    params:
+      returns: SQLiteMemoryService
+  build_persistent_session_service:
+    type: sync
+    module: scheduler_agent.session_memory
+    args: [config]
+    params:
+      returns: DatabaseSessionService
+  check_all_attendees:
+    type: async
+    module: scheduler_agent.parallel_execution.parallel_coordinator
+    args: [self, attendees, date, start_time, end_time, timezone]
+    params:
+      returns: Dict
+  check_attendees_availability:
+    type: sync
+    module: scheduler_agent.tools.availability
+    args: [attendees, date, start_time, end_time, organizer_tz]
+  check_attendees_availability_parallel:
+    type: async
+    module: scheduler_agent.tools.availability
+    args: [attendees, date, start_time, end_time, timezone, reasoning_engine]
+    params:
+      returns: dict
+  check_availability:
+    type: async
+    module: scheduler_agent.parallel_execution.availability_checker
+    args: [self, email, date, start_time, end_time, timezone]
+    params:
+      returns: Dict
+  check_conflict:
+    type: sync
+    module: scheduler_agent.tools.validation
+    args: [date, start_time, end_time, timezone]
+  check_policies:
+    type: sync
+    module: scheduler_agent.tools.validation
+    args: [duration_hours, attendee_count, start_hour, day_of_week]
+    params:
+      returns: dict
+  clear:
+    type: sync
+    module: scheduler_agent.reasoning_engine
+    args: [self]
+    params:
+      returns: None
+  create_event:
+    type: sync
+    module: scheduler_agent.tools.events
+    args: [title, date, start_time, end_time, attendees, calendar_name]
+  create_event_with_attendees:
+    type: sync
+    module: scheduler_agent.tools.events
+    args: [title, date, start_time, end_time, attendees, organizer_tz, check_availability, calendar_name]
+  find_facility:
+    type: sync
+    module: scheduler_agent.data_manager
+    args: [self, capacity, amenities]
+    params:
+      returns: List[Dict]
+  get_api_key:
+    type: sync
+    module: scheduler_agent.auth
+  get_blocking_violations:
+    type: sync
+    module: scheduler_agent.parallel_execution.policy_engine
+    args: [self, violations]
+    params:
+      returns: List[PolicyViolation]
+  get_calendar_id:
+    type: sync
+    module: scheduler_agent.tools.events
+    args: [service, calendar_name]
+    params:
+      returns: str
+  get_calendar_service:
+    type: sync
+    module: scheduler_agent.auth
+  get_credentials:
+    type: sync
+    module: scheduler_agent.auth
+  get_current_datetime_context:
+    type: sync
+    module: scheduler_agent.datetime_utils
+  get_data_manager:
+    type: sync
+    module: scheduler_agent.data_manager
+  get_facility_info:
+    type: sync
+    module: scheduler_agent.data_manager
+    args: [self, facility_name]
+    params:
+      returns: Optional[Dict]
+  get_info:
+    type: sync
+    module: scheduler_agent.parallel_execution.policy_engine
+    args: [self, violations]
+    params:
+      returns: List[PolicyViolation]
+  get_local_timezone:
+    type: sync
+    module: scheduler_agent.datetime_utils
+  get_reasoning_chain:
+    type: sync
+    module: scheduler_agent.reasoning_engine
+    args: [self, thought_type]
+    params:
+      returns: List[Thought]
+  get_session_events:
+    type: async
+    module: scheduler_agent.session_memory
+    args: [self, session_id]
+    params:
+      returns: List[Any]
+  get_summary:
+    type: sync
+    module: scheduler_agent.reasoning_engine
+    args: [self]
+    params:
+      returns: Dict
+  get_team_members:
+    type: sync
+    module: scheduler_agent.data_manager
+    args: [self, team_name]
+    params:
+      returns: List[str]
+  get_user_details:
+    type: sync
+    module: scheduler_agent.data_manager
+    args: [self, email_or_name]
+    params:
+      returns: Optional[Dict]
+  get_warnings:
+    type: sync
+    module: scheduler_agent.parallel_execution.policy_engine
+    args: [self, violations]
+    params:
+      returns: List[PolicyViolation]
+  has_all_amenities:
+    type: sync
+    module: scheduler_agent.data_manager
+    args: [facility_amenities]
+  is_blocking:
+    type: sync
+    module: scheduler_agent.parallel_execution.policy_engine
+    args: [self]
+    params:
+      returns: bool
+  is_holiday:
+    type: sync
+    module: scheduler_agent.tools.holidays
+    args: [date_str, country]
+    params:
+      returns: bool
+  is_working_time:
+    type: sync
+    module: scheduler_agent.tools.holidays
+    args: [date_str, start_time_str, end_time_str, user_email]
+    params:
+      returns: dict
+  memory_db_path:
+    type: sync
+    module: scheduler_agent.session_memory
+    args: [self]
+    params:
+      returns: Path
+  on_thought:
+    type: sync
+    module: scheduler_agent.reasoning_engine
+    args: [self, listener]
+    params:
+      returns: None
+  parse_date:
+    type: sync
+    module: scheduler_agent.datetime_utils
+    args: [date_str]
+  parse_time:
+    type: sync
+    module: scheduler_agent.datetime_utils
+    args: [time_str]
+  run_session:
+    type: async
+    module: scheduler_agent.session_memory
+    args: [self, user_queries, session_id, on_response, print_output]
+    params:
+      returns: List[str]
+  search_memory:
+    type: async
+    module: scheduler_agent.session_memory
+    args: [self, query, limit]
+    params:
+      returns: List[Any]
+  session_db_url:
+    type: sync
+    module: scheduler_agent.session_memory
+    args: [self]
+    params:
+      returns: str
+  storage_path:
+    type: sync
+    module: scheduler_agent.session_memory
+    args: [self]
+    params:
+      returns: Path
+  think:
+    type: sync
+    module: scheduler_agent.reasoning_engine
+    args: [self, content, thought_type]
+    params:
+      returns: None
+  to_dict:
+    type: sync
+    module: scheduler_agent.reasoning_engine
+    args: [self]
+    params:
+      returns: Dict
+  to_iso:
+    type: sync
+    module: scheduler_agent.datetime_utils
+    args: [date_obj, time_obj, local_tz]
+  to_json:
+    type: sync
+    module: scheduler_agent.reasoning_engine
+    args: [self, pretty]
+    params:
+      returns: str
+  validate_emails:
+    type: sync
+    module: scheduler_agent.email_utils
+    args: [emails]
+    params:
+      returns: Dict
+  validate_event:
+    type: async
+    module: scheduler_agent.parallel_execution.validation_agent
+    args: [self, event_details]
+    params:
+      returns: Dict
+  validate_event_comprehensive:
+    type: async
+    module: scheduler_agent.tools.validation
+    args: [title, date, start_time, end_time, attendees, location, calendar_name, reasoning_engine]
+    params:
+      returns: dict
+
+variables:
+  CALENDAR_AGENT_USER_ID:
+    type: env
+    params:
+      caller: [os.getenv]
+      path: [scheduler_agent.agent]
+  GENAI_API_KEY:
+    type: env
+    params:
+      caller: [os.getenv, os.environ]
+      path: [scheduler_agent.auth]
+  GOOGLE_API_KEY:
+    type: env
+    params:
+      caller: [os.environ.get, os.getenv, os.environ]
+      path: [scheduler_agent.tools.holidays, scheduler_agent.auth]
+  GOOGLE_CSE_ID:
+    type: env
+    params:
+      caller: [os.environ.get]
+      path: [scheduler_agent.tools.holidays]
+
+files:
+  ../credentials.json:
+    type: literal
+    actions: [read]
+    params:
+      path: [PROJECT_DIR]
+  ../token.json:
+    type: literal
+    actions: [read]
+    params:
+      path: [PROJECT_DIR]
+  base_dir:
+    type: literal
+    actions: [read, write]
+    params:
+      caller: [Path(self.storage_dir), base_dir.mkdir]
+  facilities.json:
+    type: literal
+    actions: [read]
+    params:
+      caller: [get_data_manager]
+      path: [base_path]
+  filepath:
+    type: variable
+    actions: [read]
+    params:
+      caller: [open, json.load]
+      alias: [f]
+  policies.json:
+    type: literal
+    actions: [read]
+    params:
+      caller: [__init__]
+      path: [project_root]
+  policies_file:
+    type: variable
+    actions: [read]
+    params:
+      caller: [Path]
+  TOKEN_PATH:
+    type: variable
+    actions: [write]
+    params:
+      caller: [open]
+      alias: [f]
+  users.json:
+    type: literal
+    actions: [read]
+    params:
+      caller: [get_data_manager]
+      path: [base_path]
